@@ -24,6 +24,17 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
     match instruction {
         x if x == OpCode::Return as u8 => simple_instruction("Return", offset),
         x if x == OpCode::Constant as u8 => constant_instruction(chunk, "Constant", offset),
+        x if x == OpCode::Negate as u8 => simple_instruction("Negate", offset),
+        x if x == OpCode::Add as u8 => simple_instruction("Add", offset),
+        x if x == OpCode::Subtract as u8 => simple_instruction("Subtract", offset),
+        x if x == OpCode::Multiply as u8 => simple_instruction("Multiply", offset),
+        x if x == OpCode::Divide as u8 => simple_instruction("Divide", offset),
+        x if x == OpCode::GreaterThan as u8 => simple_instruction("GreaterThan", offset),
+        x if x == OpCode::LessThan as u8 => simple_instruction("LessThan", offset),
+        x if x == OpCode::GreaterThanEq as u8 => simple_instruction("GreaterThanEq", offset),
+        x if x == OpCode::LessThanEq as u8 => simple_instruction("LessThanEq", offset),
+        x if x == OpCode::EqualTo as u8 => simple_instruction("EqualTo", offset),
+        x if x == OpCode::NotEqualTo as u8 => simple_instruction("NotEqualTo", offset),
         _ => simple_instruction("Unknown opcode", offset),
     }
 }

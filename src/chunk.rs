@@ -4,6 +4,23 @@ use crate::value::{Value, ValueArray};
 pub enum OpCode {
     Return,
     Constant,
+
+    //Unary operations
+    Negate,
+
+    //Binary operations
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+
+    //Comparison operations
+    GreaterThan,
+    LessThan,
+    GreaterThanEq,
+    LessThanEq,
+    EqualTo,
+    NotEqualTo,
 }
 
 pub struct Chunk {
