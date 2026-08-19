@@ -13,6 +13,7 @@ pub enum OpCode {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
 
     //Comparison operations
     GreaterThan,
@@ -21,6 +22,15 @@ pub enum OpCode {
     LessThanEq,
     EqualTo,
     NotEqualTo,
+
+    //Normal Functions
+    Print,
+
+    //Math Functions
+    Abs,
+    Floor,
+    Ceil,
+    Round,
 }
 
 pub struct Chunk {

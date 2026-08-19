@@ -6,7 +6,9 @@ use crate::{
 };
 
 mod chunk;
+mod compiler;
 mod debug;
+mod scanner;
 mod value;
 mod vm;
 
@@ -14,15 +16,18 @@ fn main() -> std::io::Result<()> {
     cli()?;
 
     let mut chunk = Chunk::new();
-    let constant = chunk.add_const(value::Value::Int(1));
+    let constant = chunk.add_const(value::Value::Float(1.23));
     chunk.write_chunk(OpCode::Constant as u8, 123);
     chunk.write_chunk(constant as u8, 123);
-    let constant2 = chunk.add_const(value::Value::Int(0));
+    let constant2 = chunk.add_const(value::Value::Float(-2.9));
     chunk.write_chunk(OpCode::Constant as u8, 123);
     chunk.write_chunk(constant2 as u8, 123);
-    chunk.write_chunk(OpCode::NotEqualTo as u8, 123);
+    chunk.write_chunk(OpCode::Add as u8, 123);
+    chunk.write_chunk(OpCode::Abs as u8, 123);
+    chunk.write_chunk(OpCode::Round as u8, 123);
+    chunk.write_chunk(OpCode::Print as u8, 123);
     chunk.write_chunk(OpCode::Return as u8, 123);
-    Vm::new().interpret(chunk);
+    Vm::new().interpret(String::new());
 
     Ok(())
 }

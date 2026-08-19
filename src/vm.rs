@@ -1,6 +1,7 @@
 use crate::{
     chunk::{Chunk, OpCode},
-    value::Value::{self, None as nai},
+    compiler,
+    value::Value::{self, Float, Int, Noth},
 };
 
 pub struct Vm {
@@ -26,11 +27,17 @@ impl Vm {
         }
     }
 
-    pub fn interpret(&mut self, chunk: Chunk) -> InterpretResult {
+    //this fn used for testing the chunk and OpCodes "ByteCode" only
+    #[allow(warnings)]
+    pub fn test_chunk(&mut self, chunk: Chunk) -> InterpretResult {
         self.chunk = chunk;
         self.ip = 0;
-
         self.run()
+    }
+
+    pub fn interpret(&mut self, source: String) -> InterpretResult {
+        compiler::compile(source);
+        InterpretResult::Ok
     }
 
     fn run(&mut self) -> InterpretResult {
@@ -50,8 +57,6 @@ impl Vm {
 
             match instruction {
                 x if x == OpCode::Return as u8 => {
-                    let value = self.stack.pop();
-                    println!("{}", value.unwrap_or(nai));
                     return InterpretResult::Ok;
                 }
                 x if x == OpCode::Constant as u8 => {
@@ -59,7 +64,7 @@ impl Vm {
                     self.stack.push(constant);
                 }
                 x if x == OpCode::Negate as u8 => {
-                    let value = self.stack.pop().unwrap_or(Value::None);
+                    let value = self.stack.pop().unwrap_or(Value::Noth);
                     self.stack.push(-value);
                 }
                 x if x == OpCode::Add as u8 => self.binary_operations('+'),
@@ -72,6 +77,47 @@ impl Vm {
                 x if x == OpCode::LessThanEq as u8 => self.comparison_operations("<="),
                 x if x == OpCode::EqualTo as u8 => self.comparison_operations("=="),
                 x if x == OpCode::NotEqualTo as u8 => self.comparison_operations("!="),
+                x if x == OpCode::Modulo as u8 => self.binary_operations('%'),
+                x if x == OpCode::Print as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+                    print!("{}", value)
+                }
+                x if x == OpCode::Abs as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    match value {
+                        Float(x) => self.stack.push(Value::Float(x.abs())),
+                        Int(x) => self.stack.push(Value::Int(x.abs())),
+                        _ => self.stack.push(value),
+                    };
+                }
+                x if x == OpCode::Floor as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_float() {
+                        self.stack.push(Value::Float(value.as_float().floor()));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::Ceil as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_float() {
+                        self.stack.push(Value::Float(value.as_float().ceil()));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::Round as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_float() {
+                        self.stack.push(Value::Float(value.as_float().round()));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
                 _ => {}
             }
         }
@@ -89,8 +135,8 @@ impl Vm {
     }
 
     fn binary_operations(&mut self, op: char) {
-        let v2 = self.stack.pop().unwrap_or(nai);
-        let v1 = self.stack.pop().unwrap_or(nai);
+        let v2 = self.stack.pop().unwrap_or(Noth);
+        let v1 = self.stack.pop().unwrap_or(Noth);
 
         match (v1, v2) {
             (Value::Float(v1), Value::Float(v2)) => self
@@ -104,8 +150,8 @@ impl Vm {
     }
 
     fn comparison_operations(&mut self, op: &str) {
-        let v2 = self.stack.pop().unwrap_or(nai);
-        let v1 = self.stack.pop().unwrap_or(nai);
+        let v2 = self.stack.pop().unwrap_or(Noth);
+        let v1 = self.stack.pop().unwrap_or(Noth);
 
         match (v1, v2) {
             (Value::Float(v1), Value::Float(v2)) => {
@@ -123,7 +169,8 @@ impl Vm {
         T: std::ops::Add<R, Output = A>
             + std::ops::Sub<R, Output = A>
             + std::ops::Mul<R, Output = A>
-            + std::ops::Div<R, Output = A>,
+            + std::ops::Div<R, Output = A>
+            + std::ops::Rem<R, Output = A>,
         R: std::cmp::PartialEq + Default,
     {
         match op {
@@ -138,6 +185,7 @@ impl Vm {
                     Some(v1 / v2)
                 }
             }
+            '%' => Some(v1 % v2),
             _ => None,
         }
     }

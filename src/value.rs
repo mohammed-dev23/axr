@@ -1,6 +1,6 @@
 use std::{fmt, ops::Neg};
 
-use crate::value::Value::Bool;
+use crate::value::Value::{Bool, Float, Int, Noth};
 
 //warnings has been allowed here because we are in a very early stage
 // not every value type is being used !
@@ -10,7 +10,47 @@ pub enum Value {
     Bool(bool),
     Float(f64),
     Int(i64),
-    None,
+    Noth,
+}
+
+#[allow(warnings)]
+impl Value {
+    pub fn is_float(&self) -> bool {
+        match self {
+            Float(_) => true,
+            Int(_) => false,
+            Bool(_) => false,
+            Noth => false,
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        match self {
+            Float(_) => false,
+            Int(_) => true,
+            Bool(_) => false,
+            Noth => false,
+        }
+    }
+}
+
+#[allow(warnings)]
+impl Value {
+    pub fn as_float(&self) -> f64 {
+        match self {
+            Float(x) => *x,
+            Int(x) => *x as f64,
+            _ => f64::default(),
+        }
+    }
+
+    pub fn as_int(&self) -> i64 {
+        match self {
+            Float(x) => *x as i64,
+            Int(x) => *x,
+            _ => i64::default(),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -19,7 +59,7 @@ impl fmt::Display for Value {
             Value::Bool(x) => write!(f, "{}", x),
             Value::Float(x) => write!(f, "{}", x),
             Value::Int(x) => write!(f, "{}", x),
-            Value::None => write!(f, "None"),
+            Value::Noth => write!(f, "None"),
         }
     }
 }
@@ -32,7 +72,7 @@ impl Neg for Value {
             Self::Float(x) => Self::Float(-x),
             Self::Int(x) => Self::Int(-x),
             Self::Bool(x) => Bool(x),
-            Self::None => Self::None,
+            Self::Noth => Self::Noth,
         }
     }
 }

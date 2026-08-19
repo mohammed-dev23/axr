@@ -35,6 +35,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::LessThanEq as u8 => simple_instruction("LessThanEq", offset),
         x if x == OpCode::EqualTo as u8 => simple_instruction("EqualTo", offset),
         x if x == OpCode::NotEqualTo as u8 => simple_instruction("NotEqualTo", offset),
+        x if x == OpCode::Print as u8 => simple_instruction("Print", offset),
         _ => simple_instruction("Unknown opcode", offset),
     }
 }
