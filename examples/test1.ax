@@ -1,4 +1,31 @@
-;;;;;;;
--
-+
-!
+print "test";
+
+fix x = 1;
+fix y = 1;
+
+print x + y;
+
+//fix is used for fixed values that cannot be changed
+fix z = 1.2;
+fix m = 1.2;
+
+print round(z + m);
+
+//set is used for values that can be reasinged
+set v = 10;
+v = 9;
+print sqrt(v);
+
+
+fix txt = "67";
+print rev(67);
+
+
+fix txt2 = "kk";
+print trim(txt2);
+
+fix txt3 = "";
+fix txt4 = "not empty!";
+
+print is_empty(txt3);
+print is_empty(txt4);
