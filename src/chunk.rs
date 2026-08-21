@@ -26,11 +26,17 @@ pub enum OpCode {
     //Normal Functions
     Print,
 
-    //Math Functions
+    //Numbers Functions
     Abs,
     Floor,
     Ceil,
     Round,
+    SquareRoot,
+
+    //Strings Functions
+    IsEmpty,
+    Trim,
+    Reverse,
 }
 
 pub struct Chunk {
@@ -39,6 +45,7 @@ pub struct Chunk {
     pub line: Vec<u32>,
 }
 
+#[allow(warnings)]
 impl Chunk {
     pub fn new() -> Self {
         Self {
@@ -47,7 +54,6 @@ impl Chunk {
             line: Vec::new(),
         }
     }
-
     pub fn write_chunk(&mut self, byte: u8, line: u32) {
         self.code.push(byte);
         self.line.push(line);

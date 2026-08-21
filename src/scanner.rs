@@ -51,6 +51,12 @@ pub enum TokenType {
     Floor,
     Ceil,
     Round,
+    Set,
+    Fix,
+    Sqrt,
+    IsEmpty,
+    Trim,
+    Reverse,
 
     //Other
     Error,
@@ -116,6 +122,9 @@ impl<'s> Scanner<'s> {
                     self.make_token(TokenType::Lesser)
                 }
             }
+            '"' => self.strings(),
+            x if x.is_numeric() => self.numbers(),
+            x if x.is_alphabetic() => self.identifier(),
             _ => self.error_token("Unexpected character."),
         }
     }
@@ -201,5 +210,66 @@ impl<'s> Scanner<'s> {
         }
 
         self.current[1..].chars().next().unwrap_or('\0')
+    }
+
+    fn strings(&mut self) -> Token {
+        while self.peek() != '"' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            self.error_token(&"Unterminated string.");
+        }
+
+        self.advance();
+        self.make_token(TokenType::String)
+    }
+
+    fn numbers(&mut self) -> Token {
+        while self.peek().is_numeric() {
+            self.advance();
+        }
+
+        if self.peek() == '.' && self.peek_next().is_numeric() {
+            self.advance();
+
+            while self.peek().is_numeric() {
+                self.advance();
+            }
+        }
+
+        self.make_token(TokenType::Number)
+    }
+
+    fn identifier(&mut self) -> Token {
+        while self.peek().is_alphabetic() || self.peek().is_numeric() || self.peek() == '_' {
+            self.advance();
+        }
+
+        let token_type = self.identifier_type();
+        self.make_token(token_type)
+    }
+
+    fn identifier_type(&mut self) -> TokenType {
+        let text = &self.start[..self.start.len() - self.current.len()];
+
+        match text {
+            "print" => TokenType::Print,
+            "abs" => TokenType::Abs,
+            "floor" => TokenType::Floor,
+            "ceil" => TokenType::Ceil,
+            "Round" => TokenType::Round,
+            "set" => TokenType::Set,
+            "fix" => TokenType::Fix,
+            "sqrt" => TokenType::Sqrt,
+            "is_empty" => TokenType::IsEmpty,
+            "trim" => TokenType::Trim,
+            "rev" => TokenType::Reverse,
+            _ => TokenType::Identifier,
+        }
     }
 }

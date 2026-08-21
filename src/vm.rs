@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     chunk::{Chunk, OpCode},
     compiler,
@@ -118,6 +120,45 @@ impl Vm {
                         self.stack.push(value);
                     }
                 }
+                x if x == OpCode::SquareRoot as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_float() || value.is_int() {
+                        self.stack.push(Value::Float(value.as_float().sqrt()));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::IsEmpty as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_str() {
+                        self.stack.push(Value::Bool(value.as_str().is_empty()));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::Trim as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_str() {
+                        self.stack
+                            .push(Value::Str(Arc::from(value.as_str().trim())));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::Reverse as u8 => {
+                    let value = self.stack.pop().unwrap_or(Noth);
+
+                    if value.is_str() {
+                        self.stack.push(Value::Str(Arc::from(
+                            value.as_str().chars().rev().collect::<String>(),
+                        )));
+                    } else {
+                        self.stack.push(value);
+                    }
+                }
                 _ => {}
             }
         }
@@ -131,7 +172,7 @@ impl Vm {
 
     fn read_constant(&mut self) -> Value {
         let index = self.read_byte() as usize;
-        self.chunk.constants.values[index]
+        self.chunk.constants.values[index].clone()
     }
 
     fn binary_operations(&mut self, op: char) {
