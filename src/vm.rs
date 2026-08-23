@@ -38,8 +38,17 @@ impl Vm {
     }
 
     pub fn interpret(&mut self, source: String) -> InterpretResult {
-        compiler::compile(source);
-        InterpretResult::Ok
+        let mut chunk = Chunk::new();
+        let mut compiler = compiler::Parser::new();
+
+        if !compiler.compile(source, &mut chunk) {
+            return InterpretResult::CompileError;
+        }
+
+        self.chunk = chunk;
+        self.ip = 0;
+
+        self.run()
     }
 
     fn run(&mut self) -> InterpretResult {

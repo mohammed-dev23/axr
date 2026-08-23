@@ -8,6 +8,7 @@ pub struct Scanner<'s> {
     line: usize,
 }
 
+#[derive(Default, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     pub start: String,
@@ -15,7 +16,7 @@ pub struct Token {
     pub line: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub enum TokenType {
     //Single-character tokens.
     LeftParen,  // (
@@ -61,6 +62,9 @@ pub enum TokenType {
     //Other
     Error,
     Eof,
+
+    #[default]
+    Nai,
 }
 
 impl<'s> Scanner<'s> {
@@ -108,14 +112,14 @@ impl<'s> Scanner<'s> {
                     self.make_token(TokenType::Equal)
                 }
             }
-            '<' => {
+            '>' => {
                 if self.match_tokens("=") {
                     self.make_token(TokenType::GreaterEqual)
                 } else {
                     self.make_token(TokenType::Greater)
                 }
             }
-            '>' => {
+            '<' => {
                 if self.match_tokens("=") {
                     self.make_token(TokenType::LesserEqual)
                 } else {

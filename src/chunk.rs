@@ -39,6 +39,7 @@ pub enum OpCode {
     Reverse,
 }
 
+#[derive(Debug, Clone)]
 pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: ValueArray,
