@@ -30,6 +30,7 @@ pub enum TokenType {
     Semicolon,  // ;
     Slash,      // /
     Star,       // *
+    Modulo,     // %
 
     //One or two character tokens.
     Bang,         // !
@@ -126,6 +127,7 @@ impl<'s> Scanner<'s> {
                     self.make_token(TokenType::Lesser)
                 }
             }
+            '%' => self.make_token(TokenType::Modulo),
             '"' => self.strings(),
             x if x.is_numeric() => self.numbers(),
             x if x.is_alphabetic() => self.identifier(),
