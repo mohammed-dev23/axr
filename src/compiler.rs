@@ -28,7 +28,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 37] = [
+static RULES: [ParseRule; 40] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -65,14 +65,42 @@ static RULES: [ParseRule; 37] = [
         infix: Some(Parser::binary),
         precedence: Precedence::Factor,
     }, // %
-    NONE_RULE, // !
-    NONE_RULE, // !=
+    ParseRule {
+        prefix: Some(Parser::unary),
+        infix: None,
+        precedence: Precedence::None,
+    }, // !
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::binary),
+        precedence: Precedence::Equality,
+    }, // !=
     NONE_RULE, // =
-    NONE_RULE, // ==
-    NONE_RULE, // >
-    NONE_RULE, // >=
-    NONE_RULE, // <
-    NONE_RULE, // <=
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::binary),
+        precedence: Precedence::Comparison,
+    }, // ==
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::binary),
+        precedence: Precedence::Equality,
+    }, // >
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::binary),
+        precedence: Precedence::Comparison,
+    }, // >=
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::binary),
+        precedence: Precedence::Comparison,
+    }, // <
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::binary),
+        precedence: Precedence::Comparison,
+    }, // <=
     NONE_RULE, // Identifier
     NONE_RULE, // String
     ParseRule {
@@ -91,11 +119,28 @@ static RULES: [ParseRule; 37] = [
     NONE_RULE, // IsEmpty
     NONE_RULE, // Trim,
     NONE_RULE, // Reverse
+    ParseRule {
+        prefix: Some(Parser::literal),
+        infix: None,
+        precedence: Precedence::None,
+    }, // True
+    ParseRule {
+        prefix: Some(Parser::literal),
+        infix: None,
+        precedence: Precedence::None,
+    }, // False
     NONE_RULE, // Error
     NONE_RULE, // Eof
+    ParseRule {
+        prefix: Some(Parser::literal),
+        infix: None,
+        precedence: Precedence::None,
+    }, // void
     NONE_RULE, // Nai
 ];
 
+// remove later!
+#[allow(warnings)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
     None,
@@ -230,8 +275,15 @@ impl Parser {
     }
 
     pub fn number(&mut self, _scanner: &mut Scanner) {
-        let value: f64 = self.previous.start.parse::<f64>().unwrap_or(0.0);
-        self.emit_constant(Value::Float(value));
+        let value = &self.previous.start;
+
+        if value.contains(".") {
+            let float_value: f64 = value.parse::<f64>().unwrap_or_default();
+            self.emit_constant(Value::Float(float_value));
+        } else {
+            let int_value: i64 = value.parse::<i64>().unwrap_or_default();
+            self.emit_constant(Value::Int(int_value));
+        }
     }
 
     pub fn emit_constant(&mut self, value: Value) {
@@ -266,6 +318,7 @@ impl Parser {
 
         match operator_type {
             TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
+            TokenType::Bang => self.emit_byte(OpCode::Not as u8),
             _ => return,
         }
     }
@@ -281,6 +334,12 @@ impl Parser {
             TokenType::Star => self.emit_byte(OpCode::Multiply as u8),
             TokenType::Slash => self.emit_byte(OpCode::Divide as u8),
             TokenType::Modulo => self.emit_byte(OpCode::Modulo as u8),
+            TokenType::BangEqual => self.emit_byte(OpCode::NotEqualTo as u8),
+            TokenType::EqualEqual => self.emit_byte(OpCode::EqualTo as u8),
+            TokenType::Greater => self.emit_byte(OpCode::GreaterThan as u8),
+            TokenType::Lesser => self.emit_byte(OpCode::LessThan as u8),
+            TokenType::GreaterEqual => self.emit_byte(OpCode::GreaterThanEq as u8),
+            TokenType::LesserEqual => self.emit_byte(OpCode::LessThanEq as u8),
             _ => return,
         }
     }
@@ -305,6 +364,15 @@ impl Parser {
             self.advance(scanner);
             let infix_rule = Self::get_rule(self.previous.token_type).infix.unwrap();
             infix_rule(self, scanner);
+        }
+    }
+
+    pub fn literal(&mut self, _scanner: &mut Scanner) {
+        match self.previous.token_type {
+            TokenType::True => self.emit_byte(OpCode::True as u8),
+            TokenType::False => self.emit_byte(OpCode::False as u8),
+            TokenType::Noth => self.emit_byte(OpCode::Void as u8),
+            _ => return,
         }
     }
 }

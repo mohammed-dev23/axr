@@ -43,6 +43,10 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::IsEmpty as u8 => simple_instruction("IsEmpty", offset),
         x if x == OpCode::Trim as u8 => simple_instruction("Trim", offset),
         x if x == OpCode::Reverse as u8 => simple_instruction("Reverse", offset),
+        x if x == OpCode::True as u8 => simple_instruction("True", offset),
+        x if x == OpCode::False as u8 => simple_instruction("False", offset),
+        x if x == OpCode::Void as u8 => simple_instruction("Void", offset),
+        x if x == OpCode::Not as u8 => simple_instruction("Not", offset),
         _ => simple_instruction("Unknown opcode", offset),
     }
 }

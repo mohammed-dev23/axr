@@ -1,6 +1,6 @@
 use std::{fmt, ops::Neg, sync::Arc};
 
-use crate::value::Value::{Bool, Float, Int, Noth, Str};
+use crate::value::Value::{Bool, Float, Int, Str, Void};
 
 //warnings has been allowed here because we are in a very early stage
 // not every value type is being used !
@@ -11,7 +11,7 @@ pub enum Value {
     Float(f64),
     Int(i64),
     Str(Arc<str>),
-    Noth,
+    Void,
 }
 
 #[allow(warnings)]
@@ -38,8 +38,15 @@ impl Value {
 
     pub fn is_str(&self) -> bool {
         match self {
-            Float(_) | Int(_) | Bool(_) | Noth => false,
+            Float(_) | Int(_) | Bool(_) | Void => false,
             Str(_) => true,
+        }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Float(_) | Int(_) | Str(_) | Void => false,
+            Bool(_) => true,
         }
     }
 }
@@ -68,6 +75,13 @@ impl Value {
             _ => Arc::from(""),
         }
     }
+
+    pub fn as_bool(&self) -> bool {
+        match self {
+            Bool(x) => *x,
+            _ => bool::default(),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -77,7 +91,7 @@ impl fmt::Display for Value {
             Value::Float(x) => write!(f, "{}", x),
             Value::Int(x) => write!(f, "{}", x),
             Value::Str(x) => write!(f, "{}", x),
-            Value::Noth => write!(f, "None"),
+            Value::Void => write!(f, "Void"),
         }
     }
 }
@@ -91,7 +105,7 @@ impl Neg for Value {
             Self::Int(x) => Self::Int(-x),
             Self::Bool(x) => Bool(x),
             Self::Str(x) => Str(x),
-            Self::Noth => Self::Noth,
+            Self::Void => Self::Void,
         }
     }
 }

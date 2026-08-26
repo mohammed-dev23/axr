@@ -60,9 +60,14 @@ pub enum TokenType {
     Trim,
     Reverse,
 
+    //Values of the boolean type
+    True,
+    False,
+
     //Other
     Error,
     Eof,
+    Noth,
 
     #[default]
     Nai,
@@ -100,28 +105,28 @@ impl<'s> Scanner<'s> {
             '/' => self.make_token(TokenType::Slash),
             '*' => self.make_token(TokenType::Star),
             '!' => {
-                if self.match_tokens("=") {
+                if self.match_tokens('=') {
                     self.make_token(TokenType::BangEqual)
                 } else {
                     self.make_token(TokenType::Bang)
                 }
             }
             '=' => {
-                if self.match_tokens("=") {
+                if self.match_tokens('=') {
                     self.make_token(TokenType::EqualEqual)
                 } else {
                     self.make_token(TokenType::Equal)
                 }
             }
             '>' => {
-                if self.match_tokens("=") {
+                if self.match_tokens('=') {
                     self.make_token(TokenType::GreaterEqual)
                 } else {
                     self.make_token(TokenType::Greater)
                 }
             }
             '<' => {
-                if self.match_tokens("=") {
+                if self.match_tokens('=') {
                     self.make_token(TokenType::LesserEqual)
                 } else {
                     self.make_token(TokenType::Lesser)
@@ -165,16 +170,16 @@ impl<'s> Scanner<'s> {
         c
     }
 
-    fn match_tokens(&mut self, expected: &str) -> bool {
+    fn match_tokens(&mut self, expected: char) -> bool {
         if self.is_at_end() {
             return false;
         }
 
-        if self.current != expected {
+        if self.peek() != expected {
             return false;
         }
 
-        self.current.chars().next().unwrap();
+        self.advance();
         true
     }
 
@@ -275,6 +280,9 @@ impl<'s> Scanner<'s> {
             "is_empty" => TokenType::IsEmpty,
             "trim" => TokenType::Trim,
             "rev" => TokenType::Reverse,
+            "true" => TokenType::True,
+            "false" => TokenType::False,
+            "Noth" => TokenType::Noth,
             _ => TokenType::Identifier,
         }
     }

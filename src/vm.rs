@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     chunk::{Chunk, OpCode},
     compiler,
-    value::Value::{self, Float, Int, Noth},
+    value::Value::{self, Float, Int, Void},
 };
 
 pub struct Vm {
@@ -75,7 +75,15 @@ impl Vm {
                     self.stack.push(constant);
                 }
                 x if x == OpCode::Negate as u8 => {
-                    let value = self.stack.pop().unwrap_or(Value::Noth);
+                    let value = self.stack.pop().unwrap_or(Value::Void);
+
+                    if !value.is_int() || !value.is_float() {
+                        self.runtime_err(&format!(
+                            "cannot use {} with negate!, only numbers are allowed.",
+                            value,
+                        ));
+                    }
+
                     self.stack.push(-value);
                 }
                 x if x == OpCode::Add as u8 => self.binary_operations('+'),
@@ -90,81 +98,134 @@ impl Vm {
                 x if x == OpCode::NotEqualTo as u8 => self.comparison_operations("!="),
                 x if x == OpCode::Modulo as u8 => self.binary_operations('%'),
                 x if x == OpCode::Print as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
                     print!("{}", value)
                 }
                 x if x == OpCode::Abs as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     match value {
                         Float(x) => self.stack.push(Value::Float(x.abs())),
                         Int(x) => self.stack.push(Value::Int(x.abs())),
-                        _ => self.stack.push(value),
+                        _ => {
+                            self.runtime_err(&format!(
+                                "cannot use {} for abs, only float/int values that are allowed",
+                                value,
+                            ));
+                            self.stack.push(value)
+                        }
                     };
                 }
                 x if x == OpCode::Floor as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_float() {
                         self.stack.push(Value::Float(value.as_float().floor()));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for floor, only float values that are allowed",
+                            value,
+                        ));
                         self.stack.push(value);
                     }
                 }
                 x if x == OpCode::Ceil as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_float() {
                         self.stack.push(Value::Float(value.as_float().ceil()));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for ceil, only float values that are allowed",
+                            value,
+                        ));
                         self.stack.push(value);
                     }
                 }
                 x if x == OpCode::Round as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_float() {
                         self.stack.push(Value::Float(value.as_float().round()));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for round, only float values that are allowed",
+                            value,
+                        ));
                         self.stack.push(value);
                     }
                 }
                 x if x == OpCode::SquareRoot as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_float() || value.is_int() {
                         self.stack.push(Value::Float(value.as_float().sqrt()));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for sqrt, only float values that are allowed",
+                            value,
+                        ));
                         self.stack.push(value);
                     }
                 }
                 x if x == OpCode::IsEmpty as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_str() {
                         self.stack.push(Value::Bool(value.as_str().is_empty()));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for is_empty, jusr str vlaue that are allowed!",
+                            value
+                        ));
                         self.stack.push(value);
                     }
                 }
                 x if x == OpCode::Trim as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_str() {
                         self.stack
                             .push(Value::Str(Arc::from(value.as_str().trim())));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for trim, jusr str vlaue that are allowed!",
+                            value
+                        ));
                         self.stack.push(value);
                     }
                 }
                 x if x == OpCode::Reverse as u8 => {
-                    let value = self.stack.pop().unwrap_or(Noth);
+                    let value = self.stack.pop().unwrap_or(Void);
 
                     if value.is_str() {
                         self.stack.push(Value::Str(Arc::from(
                             value.as_str().chars().rev().collect::<String>(),
                         )));
                     } else {
+                        self.runtime_err(&format!(
+                            "cannot use {} for reverse, jusr str vlaue that are allowed!",
+                            value
+                        ));
+                        self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::True as u8 => {
+                    self.stack.push(Value::Bool(true));
+                }
+                x if x == OpCode::False as u8 => {
+                    self.stack.push(Value::Bool(false));
+                }
+                x if x == OpCode::Void as u8 => {
+                    self.stack.push(Value::Void);
+                }
+                x if x == OpCode::Not as u8 => {
+                    let value = self.stack.pop().unwrap_or(Void);
+
+                    if value.is_bool() {
+                        self.stack.push(Value::Bool(!value.as_bool()));
+                    } else {
+                        self.runtime_err(&format!("cannot use {} with Not/! opratoier.", value));
                         self.stack.push(value);
                     }
                 }
@@ -185,8 +246,8 @@ impl Vm {
     }
 
     fn binary_operations(&mut self, op: char) {
-        let v2 = self.stack.pop().unwrap_or(Noth);
-        let v1 = self.stack.pop().unwrap_or(Noth);
+        let v2 = self.stack.pop().unwrap_or(Void);
+        let v1 = self.stack.pop().unwrap_or(Void);
 
         match (v1, v2) {
             (Value::Float(v1), Value::Float(v2)) => self
@@ -200,8 +261,8 @@ impl Vm {
     }
 
     fn comparison_operations(&mut self, op: &str) {
-        let v2 = self.stack.pop().unwrap_or(Noth);
-        let v1 = self.stack.pop().unwrap_or(Noth);
+        let v2 = self.stack.pop().unwrap_or(Void);
+        let v1 = self.stack.pop().unwrap_or(Void);
 
         match (v1, v2) {
             (Value::Float(v1), Value::Float(v2)) => {
@@ -253,5 +314,15 @@ impl Vm {
             "==" => v1 == v2,
             _ => false,
         }
+    }
+
+    pub fn runtime_err(&mut self, message: &str) -> InterpretResult {
+        eprintln!("{}", message);
+
+        let instruction = self.ip - 1;
+        let line = self.chunk.line[instruction as usize];
+        eprintln!("[line {}] in code", line);
+
+        InterpretResult::RuntimeError
     }
 }

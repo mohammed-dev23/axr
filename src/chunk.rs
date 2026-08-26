@@ -37,6 +37,14 @@ pub enum OpCode {
     IsEmpty,
     Trim,
     Reverse,
+
+    //Values of the boolean type
+    True,
+    False,
+    Not,
+
+    //Other
+    Void,
 }
 
 #[derive(Debug, Clone)]
