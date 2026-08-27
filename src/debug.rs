@@ -47,6 +47,8 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::False as u8 => simple_instruction("False", offset),
         x if x == OpCode::Void as u8 => simple_instruction("Void", offset),
         x if x == OpCode::Not as u8 => simple_instruction("Not", offset),
+        x if x == OpCode::Pop as u8 => simple_instruction("Pop", offset),
+        x if x == OpCode::DefineGlobal as u8 => constant_instruction(chunk, "DefineGlobal", offset),
         _ => simple_instruction("Unknown opcode", offset),
     }
 }

@@ -6,6 +6,8 @@ pub struct Parser {
     compiling_chunk: Chunk,
 }
 
+use std::sync::Arc;
+
 use crate::{
     chunk::{Chunk, OpCode},
     scanner::{
@@ -16,10 +18,10 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
-pub struct ParseRule {
-    pub prefix: Option<fn(&mut Parser, &mut Scanner)>,
-    pub infix: Option<fn(&mut Parser, &mut Scanner)>,
-    pub precedence: Precedence,
+struct ParseRule {
+    prefix: Option<fn(&mut Parser, &mut Scanner)>,
+    infix: Option<fn(&mut Parser, &mut Scanner)>,
+    precedence: Precedence,
 }
 
 const NONE_RULE: ParseRule = ParseRule {
@@ -142,7 +144,7 @@ static RULES: [ParseRule; 40] = [
 // remove later!
 #[allow(warnings)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Precedence {
+enum Precedence {
     None,
     Assignment, // =
     Or,         // or
@@ -175,17 +177,17 @@ impl Parser {
         self.painc_mode = false;
 
         self.advance(&mut scanner);
-        self.expression(&mut scanner);
-        self.consume(TokenType::Eof, "Expect end of expression.", &mut scanner);
+
+        while !self.match_consume(&TokenType::Eof, &mut scanner) {
+            self.declaration(&mut scanner);
+        }
 
         self.end_compiler();
-
         *chunk = self.compiling_chunk.clone();
-
         !self.had_err
     }
 
-    pub fn advance(&mut self, scanner: &mut Scanner) {
+    fn advance(&mut self, scanner: &mut Scanner) {
         self.previous = self.current.clone();
 
         loop {
@@ -199,11 +201,11 @@ impl Parser {
         }
     }
 
-    pub fn expression(&mut self, scanner: &mut Scanner) {
+    fn expression(&mut self, scanner: &mut Scanner) {
         self.parse_precedence(Precedence::Assignment, scanner);
     }
 
-    pub fn consume(&mut self, token_type: TokenType, message: &str, scanner: &mut Scanner) {
+    fn consume(&mut self, token_type: TokenType, message: &str, scanner: &mut Scanner) {
         if self.current.token_type == token_type {
             self.advance(scanner);
             return;
@@ -212,17 +214,17 @@ impl Parser {
         self.error_at_current(message);
     }
 
-    pub fn error_at_current(&mut self, message: &str) {
+    fn error_at_current(&mut self, message: &str) {
         let current_token = self.current.clone();
         self.error_at(&current_token, message);
     }
 
-    pub fn error(&mut self, message: &str) {
+    fn error(&mut self, message: &str) {
         let previous_token = self.previous.clone();
         self.error_at(&previous_token, message);
     }
 
-    pub fn error_at(&mut self, token: &Token, message: &str) {
+    fn error_at(&mut self, token: &Token, message: &str) {
         if self.painc_mode {
             return;
         }
@@ -243,7 +245,7 @@ impl Parser {
         self.had_err = true
     }
 
-    pub fn emit_byte(&mut self, byte: u8) {
+    fn emit_byte(&mut self, byte: u8) {
         let line = self.previous.line as u32;
         self.current_chunk().write_chunk(byte, line);
     }
@@ -260,8 +262,7 @@ impl Parser {
                 disassemble_chunk(self.current_chunk());
             }
         }
-        // place houlder until we get print working!
-        self.emit_byte(OpCode::Print as u8);
+        self.emit_byte(OpCode::Return as u8);
         self.emit_return();
     }
 
@@ -269,12 +270,12 @@ impl Parser {
         self.emit_byte(OpCode::Return as u8);
     }
 
-    pub fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
+    fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
         self.emit_byte(byte1);
         self.emit_byte(byte2);
     }
 
-    pub fn number(&mut self, _scanner: &mut Scanner) {
+    fn number(&mut self, _scanner: &mut Scanner) {
         let value = &self.previous.start;
 
         if value.contains(".") {
@@ -286,12 +287,12 @@ impl Parser {
         }
     }
 
-    pub fn emit_constant(&mut self, value: Value) {
+    fn emit_constant(&mut self, value: Value) {
         let constant = self.make_constant(value);
         self.emit_bytes(OpCode::Constant as u8, constant);
     }
 
-    pub fn make_constant(&mut self, value: Value) -> u8 {
+    fn make_constant(&mut self, value: Value) -> u8 {
         let constant = self.current_chunk().add_const(value) as u8;
 
         if constant > u8::MAX {
@@ -302,7 +303,7 @@ impl Parser {
         constant
     }
 
-    pub fn grouping(&mut self, scanner: &mut Scanner) {
+    fn grouping(&mut self, scanner: &mut Scanner) {
         self.expression(scanner);
         self.consume(
             TokenType::RigtParen,
@@ -311,7 +312,7 @@ impl Parser {
         );
     }
 
-    pub fn unary(&mut self, scanner: &mut Scanner) {
+    fn unary(&mut self, scanner: &mut Scanner) {
         let operator_type = self.previous.token_type;
 
         self.parse_precedence(Precedence::Unary, scanner);
@@ -323,7 +324,7 @@ impl Parser {
         }
     }
 
-    pub fn binary(&mut self, scanner: &mut Scanner) {
+    fn binary(&mut self, scanner: &mut Scanner) {
         let operator_type = self.previous.token_type;
         let rule = Self::get_rule(operator_type);
         self.parse_precedence(rule.precedence, scanner);
@@ -344,11 +345,11 @@ impl Parser {
         }
     }
 
-    pub fn get_rule(token_type: TokenType) -> ParseRule {
+    fn get_rule(token_type: TokenType) -> ParseRule {
         RULES[token_type as usize]
     }
 
-    pub fn parse_precedence(&mut self, precedence: Precedence, scanner: &mut Scanner) {
+    fn parse_precedence(&mut self, precedence: Precedence, scanner: &mut Scanner) {
         self.advance(scanner);
 
         let rule = Self::get_rule(self.previous.token_type);
@@ -367,12 +368,106 @@ impl Parser {
         }
     }
 
-    pub fn literal(&mut self, _scanner: &mut Scanner) {
+    fn literal(&mut self, _scanner: &mut Scanner) {
         match self.previous.token_type {
             TokenType::True => self.emit_byte(OpCode::True as u8),
             TokenType::False => self.emit_byte(OpCode::False as u8),
             TokenType::Noth => self.emit_byte(OpCode::Void as u8),
             _ => return,
         }
+    }
+
+    fn declaration(&mut self, scanner: &mut Scanner) {
+        self.statement(scanner);
+
+        if self.painc_mode {
+            self.synchronize();
+        }
+    }
+
+    fn statement(&mut self, scanner: &mut Scanner) {
+        if self.match_consume(&TokenType::Fix, scanner)
+            || self.match_consume(&TokenType::Set, scanner)
+        {
+            self.variable_declaration(scanner);
+        } else if self.match_consume(&TokenType::Print, scanner) {
+            self.print_statement(scanner);
+        } else {
+            self.expression_statement(scanner);
+        }
+    }
+
+    fn print_statement(&mut self, scanner: &mut Scanner) {
+        self.expression(scanner);
+        self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
+        self.emit_byte(OpCode::Print as u8);
+    }
+
+    fn expression_statement(&mut self, scanner: &mut Scanner) {
+        self.expression(scanner);
+        self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
+        self.emit_byte(OpCode::Pop as u8);
+    }
+
+    fn match_consume(&mut self, token_type: &TokenType, scanner: &mut Scanner) -> bool {
+        if !self.check(token_type) {
+            return false;
+        } else {
+            self.advance(scanner);
+            return true;
+        }
+    }
+
+    fn check(&self, token_type: &TokenType) -> bool {
+        &self.current.token_type == token_type
+    }
+
+    fn synchronize(&mut self) {
+        self.painc_mode = false;
+
+        while self.current.token_type != TokenType::Eof {
+            if self.previous.token_type == TokenType::Semicolon {
+                return;
+            } else {
+                match self.current.token_type {
+                    TokenType::Print | TokenType::Set | TokenType::Fix => {
+                        return;
+                    }
+                    _ => continue,
+                }
+            }
+        }
+    }
+
+    fn variable_declaration(&mut self, scanner: &mut Scanner) {
+        let global = self.parse_variable("Expect variable name.", scanner);
+
+        if self.match_consume(&TokenType::Equal, scanner) {
+            self.expression(scanner);
+        } else {
+            self.emit_byte(OpCode::Void as u8);
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+            scanner,
+        );
+
+        self.define_variable(global);
+    }
+
+    fn parse_variable(&mut self, error_message: &str, scanner: &mut Scanner) -> u8 {
+        self.consume(TokenType::Identifier, error_message, scanner);
+        let token = self.previous.clone();
+        self.identifier_constant(&token)
+    }
+
+    fn identifier_constant(&mut self, name: &Token) -> u8 {
+        self.make_constant(Value::Str(Arc::from(name.start.to_string())))
+    }
+
+    fn define_variable(&mut self, value: u8) {
+        self.emit_bytes(OpCode::DefineGlobal as u8, value);
     }
 }

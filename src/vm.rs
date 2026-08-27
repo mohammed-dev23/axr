@@ -1,15 +1,21 @@
 use std::sync::Arc;
 
 use crate::{
-    chunk::{Chunk, OpCode},
+    chunk::{
+        Chunk,
+        OpCode::{self},
+    },
     compiler,
+    table::Table,
     value::Value::{self, Float, Int, Void},
+    vm::InterpretResult::RuntimeError,
 };
 
 pub struct Vm {
     chunk: Chunk,
     ip: u8,
     stack: Vec<Value>,
+    table: Table,
 }
 
 // ignoried because of that the vm is on an very early stage
@@ -26,6 +32,7 @@ impl Vm {
             chunk: Chunk::new(),
             ip: 0,
             stack: Vec::new(),
+            table: Table::new(),
         }
     }
 
@@ -227,6 +234,21 @@ impl Vm {
                     } else {
                         self.runtime_err(&format!("cannot use {} with Not/! opratoier.", value));
                         self.stack.push(value);
+                    }
+                }
+                x if x == OpCode::Pop as u8 => {
+                    self.stack.pop().unwrap_or(Void);
+                    continue;
+                }
+                x if x == OpCode::DefineGlobal as u8 => {
+                    let name = self.read_constant();
+
+                    if name.is_str() {
+                        self.table.add(&name.as_str(), self.stack[0].clone());
+                        self.stack.pop().unwrap_or(Void);
+                    } else {
+                        self.runtime_err("cannot use {} for global varbails declration!");
+                        return RuntimeError;
                     }
                 }
                 _ => {}

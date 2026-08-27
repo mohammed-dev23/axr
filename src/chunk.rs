@@ -43,8 +43,12 @@ pub enum OpCode {
     False,
     Not,
 
+    //Variables
+    DefineGlobal,
+
     //Other
     Void,
+    Pop,
 }
 
 #[derive(Debug, Clone)]
