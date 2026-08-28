@@ -8,7 +8,6 @@ use crate::{
     compiler,
     table::Table,
     value::Value::{self, Float, Int, Void},
-    vm::InterpretResult::RuntimeError,
 };
 
 pub struct Vm {
@@ -107,6 +106,10 @@ impl Vm {
                 x if x == OpCode::Print as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     print!("{}", value)
+                }
+                x if x == OpCode::Println as u8 => {
+                    let value = self.stack.pop().unwrap_or(Void);
+                    println!("{}", value);
                 }
                 x if x == OpCode::Abs as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
@@ -244,11 +247,44 @@ impl Vm {
                     let name = self.read_constant();
 
                     if name.is_str() {
-                        self.table.add(&name.as_str(), self.stack[0].clone());
+                        self.table
+                            .add(&name.as_str(), self.stack.pop().unwrap_or(Void));
                         self.stack.pop().unwrap_or(Void);
                     } else {
-                        self.runtime_err("cannot use {} for global varbails declration!");
-                        return RuntimeError;
+                        return self
+                            .runtime_err("cannot use {} there must be no global varible with {}!");
+                    }
+                }
+                x if x == OpCode::GetGlobal as u8 => {
+                    let name = self.read_constant();
+
+                    if name.is_str() {
+                        if let Some(value) = self.table.get(&name.as_str()) {
+                            self.stack.push(value.clone());
+                        } else {
+                            return self
+                                .runtime_err(&format!("Undefined variable {}", name.as_str()));
+                        }
+                    } else {
+                        return self
+                            .runtime_err("cannot use {} there must be no global varible with {}!");
+                    }
+                }
+                x if x == OpCode::SetGlobal as u8 => {
+                    let name = self.read_constant();
+
+                    if name.is_str() {
+                        if self
+                            .table
+                            .add(&name.as_str(), self.stack.pop().unwrap_or(Void))
+                        {
+                            self.table.remove(&name.as_str());
+                            return self
+                                .runtime_err(&format!("Undefined variable {}", name.as_str()));
+                        }
+                    } else {
+                        return self
+                            .runtime_err("cannot use {} there must be no global varible with {}!");
                     }
                 }
                 _ => {}

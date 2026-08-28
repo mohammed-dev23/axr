@@ -25,6 +25,7 @@ pub enum OpCode {
 
     //Normal Functions
     Print,
+    Println,
 
     //Numbers Functions
     Abs,
@@ -45,6 +46,8 @@ pub enum OpCode {
 
     //Variables
     DefineGlobal,
+    GetGlobal,
+    SetGlobal,
 
     //Other
     Void,

@@ -49,6 +49,7 @@ pub enum TokenType {
 
     //Keywords.
     Print,
+    Println,
     Abs,
     Floor,
     Ceil,
@@ -67,7 +68,7 @@ pub enum TokenType {
     //Other
     Error,
     Eof,
-    Noth,
+    Void,
 
     #[default]
     Nai,
@@ -282,7 +283,8 @@ impl<'s> Scanner<'s> {
             "rev" => TokenType::Reverse,
             "true" => TokenType::True,
             "false" => TokenType::False,
-            "Noth" => TokenType::Noth,
+            "Void" => TokenType::Void,
+            "println" => TokenType::Println,
             _ => TokenType::Identifier,
         }
     }

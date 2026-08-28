@@ -15,6 +15,7 @@ impl Table {
         is_new
     }
 
+    #[allow(warnings)]
     pub fn add_table(&mut self, table: Table) {
         for (key, value) in table.0 {
             self.0.insert(key, value);

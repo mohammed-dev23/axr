@@ -2,9 +2,6 @@ use std::{fmt, ops::Neg, sync::Arc};
 
 use crate::value::Value::{Bool, Float, Int, Str, Void};
 
-//warnings has been allowed here because we are in a very early stage
-// not every value type is being used !
-#[allow(warnings)]
 #[derive(Debug, Clone)]
 pub enum Value {
     Bool(bool),
@@ -14,7 +11,6 @@ pub enum Value {
     Void,
 }
 
-#[allow(warnings)]
 impl Value {
     pub fn is_float(&self) -> bool {
         match self {
@@ -22,7 +18,7 @@ impl Value {
             Int(_) => false,
             Bool(_) => false,
             Str(_) => false,
-            Noth => false,
+            Void => false,
         }
     }
 
@@ -32,7 +28,7 @@ impl Value {
             Int(_) => true,
             Bool(_) => false,
             Str(_) => false,
-            Noth => false,
+            Void => false,
         }
     }
 
@@ -51,7 +47,6 @@ impl Value {
     }
 }
 
-#[allow(warnings)]
 impl Value {
     pub fn as_float(&self) -> f64 {
         match self {
@@ -61,6 +56,8 @@ impl Value {
         }
     }
 
+    #[allow(warnings)]
+    // has not been used in the code yet !
     pub fn as_int(&self) -> i64 {
         match self {
             Float(x) => *x as i64,

@@ -9,7 +9,10 @@ pub struct Parser {
 use std::sync::Arc;
 
 use crate::{
-    chunk::{Chunk, OpCode},
+    chunk::{
+        Chunk,
+        OpCode::{self},
+    },
     scanner::{
         Scanner, Token,
         TokenType::{self},
@@ -19,7 +22,7 @@ use crate::{
 
 #[derive(Debug, Clone, Copy)]
 struct ParseRule {
-    prefix: Option<fn(&mut Parser, &mut Scanner)>,
+    prefix: Option<fn(&mut Parser, &mut Scanner, bool)>,
     infix: Option<fn(&mut Parser, &mut Scanner)>,
     precedence: Precedence,
 }
@@ -30,7 +33,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 40] = [
+static RULES: [ParseRule; 41] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -103,14 +106,23 @@ static RULES: [ParseRule; 40] = [
         infix: Some(Parser::binary),
         precedence: Precedence::Comparison,
     }, // <=
-    NONE_RULE, // Identifier
-    NONE_RULE, // String
+    ParseRule {
+        prefix: Some(Parser::variable),
+        infix: None,
+        precedence: Precedence::None,
+    }, // Identifier
+    ParseRule {
+        prefix: Some(Parser::strings),
+        infix: None,
+        precedence: Precedence::None,
+    }, // String
     ParseRule {
         prefix: Some(Parser::number),
         infix: None,
         precedence: Precedence::None,
     }, // Number,
     NONE_RULE, // Print
+    NONE_RULE, // Println
     NONE_RULE, // Abs
     NONE_RULE, // Floor
     NONE_RULE, // Ceil
@@ -275,7 +287,7 @@ impl Parser {
         self.emit_byte(byte2);
     }
 
-    fn number(&mut self, _scanner: &mut Scanner) {
+    fn number(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
         let value = &self.previous.start;
 
         if value.contains(".") {
@@ -303,7 +315,7 @@ impl Parser {
         constant
     }
 
-    fn grouping(&mut self, scanner: &mut Scanner) {
+    fn grouping(&mut self, scanner: &mut Scanner, _can_assign: bool) {
         self.expression(scanner);
         self.consume(
             TokenType::RigtParen,
@@ -312,7 +324,7 @@ impl Parser {
         );
     }
 
-    fn unary(&mut self, scanner: &mut Scanner) {
+    fn unary(&mut self, scanner: &mut Scanner, _can_assign: bool) {
         let operator_type = self.previous.token_type;
 
         self.parse_precedence(Precedence::Unary, scanner);
@@ -353,12 +365,17 @@ impl Parser {
         self.advance(scanner);
 
         let rule = Self::get_rule(self.previous.token_type);
+        let can_assign = precedence <= Precedence::Assignment;
 
         if let Some(prefix) = rule.prefix {
-            prefix(self, scanner);
+            prefix(self, scanner, can_assign);
         } else {
             self.error("Expect expression.");
             return;
+        }
+
+        if can_assign && self.match_consume(&TokenType::Equal, scanner) {
+            self.error("Invalid assignment target.");
         }
 
         while precedence <= Self::get_rule(self.current.token_type).precedence {
@@ -368,11 +385,11 @@ impl Parser {
         }
     }
 
-    fn literal(&mut self, _scanner: &mut Scanner) {
+    fn literal(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
         match self.previous.token_type {
             TokenType::True => self.emit_byte(OpCode::True as u8),
             TokenType::False => self.emit_byte(OpCode::False as u8),
-            TokenType::Noth => self.emit_byte(OpCode::Void as u8),
+            TokenType::Void => self.emit_byte(OpCode::Void as u8),
             _ => return,
         }
     }
@@ -386,14 +403,22 @@ impl Parser {
     }
 
     fn statement(&mut self, scanner: &mut Scanner) {
-        if self.match_consume(&TokenType::Fix, scanner)
-            || self.match_consume(&TokenType::Set, scanner)
-        {
-            self.variable_declaration(scanner);
-        } else if self.match_consume(&TokenType::Print, scanner) {
-            self.print_statement(scanner);
-        } else {
-            self.expression_statement(scanner);
+        let token = self.current.token_type;
+
+        match token {
+            TokenType::Set | TokenType::Fix => {
+                self.match_consume(&token, scanner);
+                self.variable_declaration(scanner);
+            }
+            TokenType::Println => {
+                self.match_consume(&token, scanner);
+                self.println_statement(scanner);
+            }
+            TokenType::Print => {
+                self.match_consume(&token, scanner);
+                self.print_statement(scanner);
+            }
+            _ => self.expression_statement(scanner),
         }
     }
 
@@ -401,6 +426,12 @@ impl Parser {
         self.expression(scanner);
         self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
         self.emit_byte(OpCode::Print as u8);
+    }
+
+    fn println_statement(&mut self, scanner: &mut Scanner) {
+        self.expression(scanner);
+        self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
+        self.emit_byte(OpCode::Println as u8);
     }
 
     fn expression_statement(&mut self, scanner: &mut Scanner) {
@@ -469,5 +500,27 @@ impl Parser {
 
     fn define_variable(&mut self, value: u8) {
         self.emit_bytes(OpCode::DefineGlobal as u8, value);
+    }
+
+    fn variable(&mut self, scanner: &mut Scanner, can_assign: bool) {
+        let token = &self.previous.clone();
+        self.named_variable(token, scanner, can_assign);
+    }
+
+    fn named_variable(&mut self, name: &Token, scanner: &mut Scanner, can_assign: bool) {
+        let arg = self.identifier_constant(name);
+
+        if can_assign && self.match_consume(&TokenType::Equal, scanner) {
+            self.expression(scanner);
+            self.emit_bytes(OpCode::SetGlobal as u8, arg);
+        } else {
+            self.emit_bytes(OpCode::GetGlobal as u8, arg);
+        }
+    }
+
+    fn strings(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
+        let raw = &self.previous.start;
+        let trimmed = &raw[1..raw.len() - 1];
+        self.emit_constant(Value::Str(Arc::from(trimmed)));
     }
 }

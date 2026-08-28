@@ -1,2 +1,16 @@
-//print now works!
-print (9 + 8) * 7 / 2;
+//set now works !
+set x = (9.1 + 8.3) * 7.1 / 2.33;
+
+//print works !
+println x;
+
+//fix works but not as intinted yet !;
+fix y = 9 / 2;
+
+// println added!
+println y;
+
+set n = 1;
+println 1;
+n = 0;
+println 0;
