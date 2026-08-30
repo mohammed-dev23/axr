@@ -4,15 +4,35 @@ pub struct Parser {
     had_err: bool,
     painc_mode: bool,
     compiling_chunk: Chunk,
+    compiler: Compiler,
+}
+
+pub struct Compiler {
+    locals: Vec<Local>,
+    local_count: i32,
+    scope_depth: i32,
+}
+
+pub struct Local {
+    name: Token,
+    depth: i32,
+    is_mut: bool,
+}
+
+impl Compiler {
+    pub fn new() -> Self {
+        Self {
+            locals: Vec::new(),
+            local_count: 0,
+            scope_depth: 0,
+        }
+    }
 }
 
 use std::sync::Arc;
 
 use crate::{
-    chunk::{
-        Chunk,
-        OpCode::{self},
-    },
+    chunk::{Chunk, OpCode},
     scanner::{
         Scanner, Token,
         TokenType::{self},
@@ -127,8 +147,8 @@ static RULES: [ParseRule; 41] = [
     NONE_RULE, // Floor
     NONE_RULE, // Ceil
     NONE_RULE, // Round
-    NONE_RULE, // Set
-    NONE_RULE, // Fix
+    NONE_RULE, // Let
+    NONE_RULE, // ~
     NONE_RULE, // Sqrt
     NONE_RULE, // IsEmpty
     NONE_RULE, // Trim,
@@ -178,6 +198,7 @@ impl Parser {
             had_err: false,
             painc_mode: false,
             compiling_chunk: Chunk::new(),
+            compiler: Compiler::new(),
         }
     }
 
@@ -406,7 +427,13 @@ impl Parser {
         let token = self.current.token_type;
 
         match token {
-            TokenType::Set | TokenType::Fix => {
+            TokenType::LeftBrace => {
+                self.match_consume(&token, scanner);
+                self.begin_scope();
+                self.block(scanner);
+                self.end_scope();
+            }
+            TokenType::Let => {
                 self.match_consume(&token, scanner);
                 self.variable_declaration(scanner);
             }
@@ -461,7 +488,7 @@ impl Parser {
                 return;
             } else {
                 match self.current.token_type {
-                    TokenType::Print | TokenType::Set | TokenType::Fix => {
+                    TokenType::Print | TokenType::Let => {
                         return;
                     }
                     _ => continue,
@@ -489,7 +516,16 @@ impl Parser {
     }
 
     fn parse_variable(&mut self, error_message: &str, scanner: &mut Scanner) -> u8 {
+        let is_mut = self.match_consume(&TokenType::Tilde, scanner);
         self.consume(TokenType::Identifier, error_message, scanner);
+
+        self.declare_variable();
+        if self.compiler.scope_depth > 0 {
+            let idx = self.compiler.local_count as usize - 1;
+            self.compiler.locals[idx].is_mut = is_mut;
+            return 0;
+        }
+
         let token = self.previous.clone();
         self.identifier_constant(&token)
     }
@@ -499,7 +535,21 @@ impl Parser {
     }
 
     fn define_variable(&mut self, value: u8) {
+        if self.compiler.scope_depth > 0 {
+            self.mark_initialized();
+            return;
+        }
+
         self.emit_bytes(OpCode::DefineGlobal as u8, value);
+    }
+
+    fn declare_variable(&mut self) {
+        if self.compiler.scope_depth == 0 {
+            return;
+        }
+
+        let name = self.previous.clone();
+        self.add_local(name);
     }
 
     fn variable(&mut self, scanner: &mut Scanner, can_assign: bool) {
@@ -508,13 +558,24 @@ impl Parser {
     }
 
     fn named_variable(&mut self, name: &Token, scanner: &mut Scanner, can_assign: bool) {
-        let arg = self.identifier_constant(name);
+        let (get_op, set_op): (u8, u8);
 
-        if can_assign && self.match_consume(&TokenType::Equal, scanner) {
-            self.expression(scanner);
-            self.emit_bytes(OpCode::SetGlobal as u8, arg);
+        let (arg, is_mut) = if let Some(x) = self.resolve_local(name) {
+            get_op = OpCode::GetLocal as u8;
+            set_op = OpCode::SetLocal as u8;
+            (x.0, x.1)
         } else {
-            self.emit_bytes(OpCode::GetGlobal as u8, arg);
+            let arg = self.identifier_constant(name) as u8;
+            get_op = OpCode::GetGlobal as u8;
+            set_op = OpCode::SetGlobal as u8;
+            (arg, false)
+        };
+
+        if can_assign && is_mut && self.match_consume(&TokenType::Equal, scanner) {
+            self.expression(scanner);
+            self.emit_bytes(set_op, arg);
+        } else {
+            self.emit_bytes(get_op, arg);
         }
     }
 
@@ -522,5 +583,66 @@ impl Parser {
         let raw = &self.previous.start;
         let trimmed = &raw[1..raw.len() - 1];
         self.emit_constant(Value::Str(Arc::from(trimmed)));
+    }
+
+    fn block(&mut self, scanner: &mut Scanner) {
+        while !self.check(&TokenType::RightBrace) && !self.check(&TokenType::Eof) {
+            self.declaration(scanner);
+        }
+
+        self.consume(TokenType::RightBrace, "Expect '}' after block.", scanner);
+    }
+
+    fn begin_scope(&mut self) {
+        self.compiler.scope_depth += 1;
+    }
+
+    fn end_scope(&mut self) {
+        self.compiler.scope_depth -= 1;
+
+        while self.compiler.locals.len() > 0
+            && self.compiler.locals[self.compiler.local_count as usize - 1].depth
+                > self.compiler.scope_depth
+        {
+            self.emit_byte(OpCode::Pop as u8);
+            self.compiler.locals.pop();
+            self.compiler.local_count -= 1;
+        }
+    }
+
+    fn add_local(&mut self, name: Token) {
+        self.compiler.locals.push(Local {
+            name,
+            depth: -1,
+            is_mut: false,
+        });
+        self.compiler.local_count += 1;
+    }
+
+    fn resolve_local(&mut self, name: &Token) -> Option<(u8, bool)> {
+        for i in 0..self.compiler.local_count {
+            let local = &self.compiler.locals[i as usize];
+            let is_mut = local.is_mut;
+            if Self::identifiers_equal(name, &local.name) {
+                if local.depth == -1 {
+                    self.error("Can't read local variable in its own initializer.");
+                }
+                return Some((i as u8, is_mut));
+            }
+        }
+        None
+    }
+
+    fn identifiers_equal(token_a: &Token, token_b: &Token) -> bool {
+        if token_a.length != token_b.length {
+            return false;
+        }
+
+        token_a.start == token_b.start
+    }
+
+    fn mark_initialized(&mut self) {
+        self.compiler.locals[self.compiler.local_count as usize - 1].depth =
+            self.compiler.scope_depth;
     }
 }

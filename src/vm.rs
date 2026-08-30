@@ -8,6 +8,7 @@ use crate::{
     compiler,
     table::Table,
     value::Value::{self, Float, Int, Void},
+    vm::InterpretResult::CompileError,
 };
 
 pub struct Vm {
@@ -19,6 +20,7 @@ pub struct Vm {
 
 // ignoried because of that the vm is on an very early stage
 #[allow(warnings)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum InterpretResult {
     Ok,
     CompileError,
@@ -92,17 +94,42 @@ impl Vm {
 
                     self.stack.push(-value);
                 }
-                x if x == OpCode::Add as u8 => self.binary_operations('+'),
-                x if x == OpCode::Subtract as u8 => self.binary_operations('-'),
-                x if x == OpCode::Multiply as u8 => self.binary_operations('*'),
-                x if x == OpCode::Divide as u8 => self.binary_operations('/'),
+                x if x == OpCode::Add as u8 => {
+                    if self.binary_operations('+') == CompileError {
+                        return CompileError;
+                    }
+                    continue;
+                }
+                x if x == OpCode::Subtract as u8 => {
+                    if self.binary_operations('-') == CompileError {
+                        return CompileError;
+                    }
+                    continue;
+                }
+                x if x == OpCode::Multiply as u8 => {
+                    if self.binary_operations('*') == CompileError {
+                        return CompileError;
+                    }
+                    continue;
+                }
+                x if x == OpCode::Divide as u8 => {
+                    if self.binary_operations('/') == CompileError {
+                        return CompileError;
+                    }
+                    continue;
+                }
                 x if x == OpCode::GreaterThan as u8 => self.comparison_operations(">"),
                 x if x == OpCode::LessThan as u8 => self.comparison_operations("<"),
                 x if x == OpCode::GreaterThanEq as u8 => self.comparison_operations(">="),
                 x if x == OpCode::LessThanEq as u8 => self.comparison_operations("<="),
                 x if x == OpCode::EqualTo as u8 => self.comparison_operations("=="),
                 x if x == OpCode::NotEqualTo as u8 => self.comparison_operations("!="),
-                x if x == OpCode::Modulo as u8 => self.binary_operations('%'),
+                x if x == OpCode::Modulo as u8 => {
+                    if self.binary_operations('%') == CompileError {
+                        return CompileError;
+                    }
+                    continue;
+                }
                 x if x == OpCode::Print as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     print!("{}", value)
@@ -287,6 +314,15 @@ impl Vm {
                             .runtime_err("cannot use {} there must be no global varible with {}!");
                     }
                 }
+                x if x == OpCode::GetLocal as u8 => {
+                    let slot = self.read_byte();
+                    let value = self.stack[slot as usize].clone();
+                    self.stack.push(value);
+                }
+                x if x == OpCode::SetLocal as u8 => {
+                    let slot = self.read_byte();
+                    self.stack[slot as usize] = self.stack.pop().unwrap_or(Void);
+                }
                 _ => {}
             }
         }
@@ -303,18 +339,49 @@ impl Vm {
         self.chunk.constants.values[index].clone()
     }
 
-    fn binary_operations(&mut self, op: char) {
+    fn binary_operations(&mut self, op: char) -> InterpretResult {
         let v2 = self.stack.pop().unwrap_or(Void);
         let v1 = self.stack.pop().unwrap_or(Void);
 
-        match (v1, v2) {
-            (Value::Float(v1), Value::Float(v2)) => self
-                .stack
-                .push(Value::Float(Self::op(op, v1, v2).unwrap_or(0.0))),
-            (Value::Int(v1), Value::Int(v2)) => self
-                .stack
-                .push(Value::Int(Self::op(op, v1, v2).unwrap_or(0))),
-            _ => {}
+        match (&v1, &v2) {
+            (Value::Float(v1), Value::Float(v2)) => {
+                self.stack
+                    .push(Value::Float(Self::op(op, v1, *v2).unwrap_or(0.0)));
+                return InterpretResult::Ok;
+            }
+            (Value::Int(v1), Value::Int(v2)) => {
+                self.stack
+                    .push(Value::Int(Self::op(op, v1, *v2).unwrap_or(0)));
+                return InterpretResult::Ok;
+            }
+            (Value::Float(v1), Value::Int(v2)) => {
+                self.stack
+                    .push(Value::Float(Self::op(op, v1, *v2 as f64).unwrap_or(0.0)));
+                return InterpretResult::Ok;
+            }
+            (Value::Int(v1), Value::Float(v2)) => {
+                self.stack
+                    .push(Value::Float(Self::op(op, *v1 as f64, *v2).unwrap_or(0.0)));
+                return InterpretResult::Ok;
+            }
+            (Value::Str(v1), Value::Str(v2)) => {
+                if op == '+' {
+                    self.stack.push(Value::Str(Arc::from(v1.to_string() + v2)));
+                    return InterpretResult::Ok;
+                } else {
+                    return self
+                        .compile_time_err(&format!("[{}] is not implmented for [{}]", op, "str"));
+                }
+            }
+            _ => {
+                return self.compile_time_err(&format!(
+                    "mismatched types cannot use [{} -> {}] with [{} -> {}] !",
+                    v1.cap(),
+                    v1,
+                    v2.cap(),
+                    v2
+                ));
+            }
         }
     }
 
@@ -374,7 +441,7 @@ impl Vm {
         }
     }
 
-    pub fn runtime_err(&mut self, message: &str) -> InterpretResult {
+    fn runtime_err(&mut self, message: &str) -> InterpretResult {
         eprintln!("{}", message);
 
         let instruction = self.ip - 1;
@@ -382,5 +449,15 @@ impl Vm {
         eprintln!("[line {}] in code", line);
 
         InterpretResult::RuntimeError
+    }
+
+    fn compile_time_err(&mut self, message: &str) -> InterpretResult {
+        eprintln!("{}", message);
+
+        let instruction = self.ip - 1;
+        let line = self.chunk.line[instruction as usize];
+        eprintln!("[line {}] in code", line);
+
+        InterpretResult::CompileError
     }
 }

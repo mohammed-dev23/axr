@@ -54,8 +54,8 @@ pub enum TokenType {
     Floor,
     Ceil,
     Round,
-    Set,
-    Fix,
+    Let,
+    Tilde,
     Sqrt,
     IsEmpty,
     Trim,
@@ -94,6 +94,7 @@ impl<'s> Scanner<'s> {
         let c = self.advance();
 
         match c {
+            '~' => self.make_token(TokenType::Tilde),
             '(' => self.make_token(TokenType::LeftParen),
             ')' => self.make_token(TokenType::RigtParen),
             '{' => self.make_token(TokenType::LeftBrace),
@@ -275,8 +276,7 @@ impl<'s> Scanner<'s> {
             "floor" => TokenType::Floor,
             "ceil" => TokenType::Ceil,
             "Round" => TokenType::Round,
-            "set" => TokenType::Set,
-            "fix" => TokenType::Fix,
+            "let" => TokenType::Let,
             "sqrt" => TokenType::Sqrt,
             "is_empty" => TokenType::IsEmpty,
             "trim" => TokenType::Trim,

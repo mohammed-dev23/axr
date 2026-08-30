@@ -1,16 +1,46 @@
 //set now works !
-set x = (9.1 + 8.3) * 7.1 / 2.33;
+let x = (9.1 + 8.3) * 7.1 / 2.33;
 
 //print works !
 println x;
 
-//fix works but not as intinted yet !;
-fix y = 9 / 2;
+let y = 9 / 2;
 
 // println added!
 println y;
 
-set n = 1;
-println 1;
-n = 0;
-println 0;
+// ~ for mut values
+{
+    let ~n = 1;
+    println 1;
+    n = 0;
+    println 0;
+}
+
+//works!
+let g = 1.9;
+let v = 1;
+let m = g + v;
+println m;
+
+// wont work type conflit error !
+// let z = "1";
+// let l = 2;
+// let b = z + l;
+// println b;
+
+
+{
+    let value = "hello world";
+    println value;
+    {
+        let gg = 90;
+        println gg / 10;
+        {
+            let v1 = "h";
+            let v2 = "e";
+            let v3 = "y";
+            println v1 + v2 + v3;
+        }
+    }
+}

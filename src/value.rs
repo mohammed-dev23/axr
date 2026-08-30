@@ -81,6 +81,18 @@ impl Value {
     }
 }
 
+impl Value {
+    pub fn cap(&self) -> String {
+        match self {
+            Self::Bool(_) => "bool".to_string(),
+            Self::Float(_) => "float".to_string(),
+            Self::Str(_) => "str".to_string(),
+            Self::Int(_) => "int".to_string(),
+            Self::Void => "void".to_string(),
+        }
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
