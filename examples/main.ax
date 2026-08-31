@@ -1,0 +1,17 @@
+const SOME = 1000;
+
+fn main() {
+    let x = 1;
+    let z = 2;
+    println x + z + SOME;
+
+    let ~v = "any";
+    v = "None";
+    println v;
+
+    let v1 = "h";
+    let v2 = "e";
+    let v3 = "y";
+    let v_full = v1 + v2 + v3;
+    println v_full;
+}

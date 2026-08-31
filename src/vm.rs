@@ -6,7 +6,6 @@ use crate::{
         OpCode::{self},
     },
     compiler,
-    table::Table,
     value::Value::{self, Float, Int, Void},
     vm::InterpretResult::CompileError,
 };
@@ -15,7 +14,6 @@ pub struct Vm {
     chunk: Chunk,
     ip: u8,
     stack: Vec<Value>,
-    table: Table,
 }
 
 // ignoried because of that the vm is on an very early stage
@@ -33,7 +31,6 @@ impl Vm {
             chunk: Chunk::new(),
             ip: 0,
             stack: Vec::new(),
-            table: Table::new(),
         }
     }
 
@@ -270,50 +267,7 @@ impl Vm {
                     self.stack.pop().unwrap_or(Void);
                     continue;
                 }
-                x if x == OpCode::DefineGlobal as u8 => {
-                    let name = self.read_constant();
 
-                    if name.is_str() {
-                        self.table
-                            .add(&name.as_str(), self.stack.pop().unwrap_or(Void));
-                        self.stack.pop().unwrap_or(Void);
-                    } else {
-                        return self
-                            .runtime_err("cannot use {} there must be no global varible with {}!");
-                    }
-                }
-                x if x == OpCode::GetGlobal as u8 => {
-                    let name = self.read_constant();
-
-                    if name.is_str() {
-                        if let Some(value) = self.table.get(&name.as_str()) {
-                            self.stack.push(value.clone());
-                        } else {
-                            return self
-                                .runtime_err(&format!("Undefined variable {}", name.as_str()));
-                        }
-                    } else {
-                        return self
-                            .runtime_err("cannot use {} there must be no global varible with {}!");
-                    }
-                }
-                x if x == OpCode::SetGlobal as u8 => {
-                    let name = self.read_constant();
-
-                    if name.is_str() {
-                        if self
-                            .table
-                            .add(&name.as_str(), self.stack.pop().unwrap_or(Void))
-                        {
-                            self.table.remove(&name.as_str());
-                            return self
-                                .runtime_err(&format!("Undefined variable {}", name.as_str()));
-                        }
-                    } else {
-                        return self
-                            .runtime_err("cannot use {} there must be no global varible with {}!");
-                    }
-                }
                 x if x == OpCode::GetLocal as u8 => {
                     let slot = self.read_byte();
                     let value = self.stack[slot as usize].clone();
@@ -321,7 +275,7 @@ impl Vm {
                 }
                 x if x == OpCode::SetLocal as u8 => {
                     let slot = self.read_byte();
-                    self.stack[slot as usize] = self.stack.pop().unwrap_or(Void);
+                    self.stack[slot as usize] = self.peek();
                 }
                 _ => {}
             }
@@ -332,6 +286,10 @@ impl Vm {
         let byte = self.chunk.code[self.ip as usize];
         self.ip += 1;
         byte
+    }
+
+    fn peek(&mut self) -> Value {
+        self.stack.last().unwrap_or(&Void).clone()
     }
 
     fn read_constant(&mut self) -> Value {

@@ -45,9 +45,6 @@ pub enum OpCode {
     Not,
 
     //Variables
-    DefineGlobal,
-    GetGlobal,
-    SetGlobal,
     GetLocal,
     SetLocal,
 

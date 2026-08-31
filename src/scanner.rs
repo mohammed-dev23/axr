@@ -56,6 +56,8 @@ pub enum TokenType {
     Round,
     Let,
     Tilde,
+    Const,
+    Fn,
     Sqrt,
     IsEmpty,
     Trim,
@@ -285,6 +287,8 @@ impl<'s> Scanner<'s> {
             "false" => TokenType::False,
             "Void" => TokenType::Void,
             "println" => TokenType::Println,
+            "const" => TokenType::Const,
+            "fn" => TokenType::Fn,
             _ => TokenType::Identifier,
         }
     }

@@ -5,6 +5,7 @@ pub struct Parser {
     painc_mode: bool,
     compiling_chunk: Chunk,
     compiler: Compiler,
+    const_table: HashMap<String, Value>,
 }
 
 pub struct Compiler {
@@ -29,10 +30,13 @@ impl Compiler {
     }
 }
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    chunk::{Chunk, OpCode},
+    chunk::{
+        Chunk,
+        OpCode::{self, GetLocal, SetLocal},
+    },
     scanner::{
         Scanner, Token,
         TokenType::{self},
@@ -53,7 +57,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 41] = [
+static RULES: [ParseRule; 43] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -149,6 +153,8 @@ static RULES: [ParseRule; 41] = [
     NONE_RULE, // Round
     NONE_RULE, // Let
     NONE_RULE, // ~
+    NONE_RULE, // Const
+    NONE_RULE, // Fn
     NONE_RULE, // Sqrt
     NONE_RULE, // IsEmpty
     NONE_RULE, // Trim,
@@ -199,6 +205,7 @@ impl Parser {
             painc_mode: false,
             compiling_chunk: Chunk::new(),
             compiler: Compiler::new(),
+            const_table: HashMap::new(),
         }
     }
 
@@ -445,17 +452,35 @@ impl Parser {
                 self.match_consume(&token, scanner);
                 self.print_statement(scanner);
             }
+            TokenType::Const => {
+                self.match_consume(&token, scanner);
+                self.const_declaration(scanner);
+            }
+            TokenType::Fn => {
+                self.match_consume(&token, scanner);
+                self.fn_declaration(scanner);
+            }
             _ => self.expression_statement(scanner),
         }
     }
 
     fn print_statement(&mut self, scanner: &mut Scanner) {
+        if self.compiler.scope_depth == 0 {
+            self.error("Statement must be insaid a fn body");
+            return;
+        }
+
         self.expression(scanner);
         self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
         self.emit_byte(OpCode::Print as u8);
     }
 
     fn println_statement(&mut self, scanner: &mut Scanner) {
+        if self.compiler.scope_depth == 0 {
+            self.error("Statement must be insaid a fn body");
+            return;
+        }
+
         self.expression(scanner);
         self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
         self.emit_byte(OpCode::Println as u8);
@@ -465,6 +490,16 @@ impl Parser {
         self.expression(scanner);
         self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
         self.emit_byte(OpCode::Pop as u8);
+    }
+
+    fn fn_declaration(&mut self, scanner: &mut Scanner) {
+        self.consume(TokenType::Identifier, "Expect name after fn.", scanner);
+        self.consume(TokenType::LeftParen, "Expect '(' after fn name.", scanner);
+        self.consume(TokenType::RigtParen, "Enclosed ')' expected.", scanner);
+        self.consume(TokenType::LeftBrace, "Expect '{' after fn name.", scanner);
+        self.begin_scope();
+        self.block(scanner);
+        self.end_scope();
     }
 
     fn match_consume(&mut self, token_type: &TokenType, scanner: &mut Scanner) -> bool {
@@ -498,7 +533,12 @@ impl Parser {
     }
 
     fn variable_declaration(&mut self, scanner: &mut Scanner) {
-        let global = self.parse_variable("Expect variable name.", scanner);
+        if self.compiler.scope_depth == 0 {
+            self.error("Statements must be insaid a fn body");
+            return;
+        }
+
+        self.parse_variable("Expect variable name.", scanner);
 
         if self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
@@ -512,7 +552,57 @@ impl Parser {
             scanner,
         );
 
-        self.define_variable(global);
+        self.define_variable();
+    }
+
+    fn const_declaration(&mut self, scanner: &mut Scanner) {
+        let const_name = self.parse_const("Expect const name.", scanner);
+
+        if !const_name.chars().all(|c| c.is_uppercase()) {
+            self.error("Const name must be all in uppercase");
+            return;
+        }
+
+        self.consume(TokenType::Equal, "Expect '=' after const name.", scanner);
+
+        let const_value = self.const_value(scanner);
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+            scanner,
+        );
+
+        self.define_const(const_name, const_value);
+    }
+
+    fn const_value(&mut self, scanner: &mut Scanner) -> Value {
+        self.advance(scanner);
+
+        match &self.previous.token_type {
+            TokenType::Number => {
+                let txt = &self.previous.start;
+                if txt.contains('.') {
+                    let value = txt.parse::<f64>().unwrap_or(0.0);
+                    Value::Float(value)
+                } else {
+                    let value = txt.parse::<i64>().unwrap_or(0);
+                    Value::Int(value)
+                }
+            }
+            TokenType::String => {
+                let raw = &self.previous.start;
+                let trimmed = &raw[1..raw.len() - 1];
+                Value::Str(Arc::from(trimmed))
+            }
+            TokenType::True => Value::Bool(true),
+            TokenType::False => Value::Bool(false),
+            TokenType::Void => Value::Void,
+            _ => {
+                self.error("const value must be a literal (number, string, bool, or Void).");
+                return Value::Void;
+            }
+        }
     }
 
     fn parse_variable(&mut self, error_message: &str, scanner: &mut Scanner) -> u8 {
@@ -530,17 +620,21 @@ impl Parser {
         self.identifier_constant(&token)
     }
 
+    fn parse_const(&mut self, error_message: &str, scanner: &mut Scanner) -> String {
+        self.consume(TokenType::Identifier, error_message, scanner);
+        self.previous.start.clone()
+    }
+
     fn identifier_constant(&mut self, name: &Token) -> u8 {
         self.make_constant(Value::Str(Arc::from(name.start.to_string())))
     }
 
-    fn define_variable(&mut self, value: u8) {
-        if self.compiler.scope_depth > 0 {
-            self.mark_initialized();
-            return;
-        }
+    fn define_variable(&mut self) {
+        self.mark_initialized();
+    }
 
-        self.emit_bytes(OpCode::DefineGlobal as u8, value);
+    fn define_const(&mut self, name: String, value: Value) {
+        self.const_table.insert(name, value);
     }
 
     fn declare_variable(&mut self) {
@@ -558,24 +652,21 @@ impl Parser {
     }
 
     fn named_variable(&mut self, name: &Token, scanner: &mut Scanner, can_assign: bool) {
-        let (get_op, set_op): (u8, u8);
+        if let Some(value) = self.const_table.get(&name.start).cloned() {
+            self.emit_constant(value);
+            return;
+        }
 
-        let (arg, is_mut) = if let Some(x) = self.resolve_local(name) {
-            get_op = OpCode::GetLocal as u8;
-            set_op = OpCode::SetLocal as u8;
-            (x.0, x.1)
-        } else {
-            let arg = self.identifier_constant(name) as u8;
-            get_op = OpCode::GetGlobal as u8;
-            set_op = OpCode::SetGlobal as u8;
-            (arg, false)
+        let Some((arg, is_mut)) = self.resolve_local(name) else {
+            self.error("");
+            return;
         };
 
         if can_assign && is_mut && self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
-            self.emit_bytes(set_op, arg);
+            self.emit_bytes(SetLocal as u8, arg);
         } else {
-            self.emit_bytes(get_op, arg);
+            self.emit_bytes(GetLocal as u8, arg);
         }
     }
 
