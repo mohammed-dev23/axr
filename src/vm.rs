@@ -7,7 +7,6 @@ use crate::{
     },
     compiler,
     value::Value::{self, Float, Int, Void},
-    vm::InterpretResult::CompileError,
 };
 
 pub struct Vm {
@@ -81,52 +80,19 @@ impl Vm {
                 }
                 x if x == OpCode::Negate as u8 => {
                     let value = self.stack.pop().unwrap_or(Value::Void);
-
-                    if !value.is_int() || !value.is_float() {
-                        self.runtime_err(&format!(
-                            "cannot use {} with negate!, only numbers are allowed.",
-                            value,
-                        ));
-                    }
-
                     self.stack.push(-value);
                 }
-                x if x == OpCode::Add as u8 => {
-                    if self.binary_operations('+') == CompileError {
-                        return CompileError;
-                    }
-                    continue;
-                }
-                x if x == OpCode::Subtract as u8 => {
-                    if self.binary_operations('-') == CompileError {
-                        return CompileError;
-                    }
-                    continue;
-                }
-                x if x == OpCode::Multiply as u8 => {
-                    if self.binary_operations('*') == CompileError {
-                        return CompileError;
-                    }
-                    continue;
-                }
-                x if x == OpCode::Divide as u8 => {
-                    if self.binary_operations('/') == CompileError {
-                        return CompileError;
-                    }
-                    continue;
-                }
+                x if x == OpCode::Add as u8 => self.binary_operations('+'),
+                x if x == OpCode::Subtract as u8 => self.binary_operations('-'),
+                x if x == OpCode::Multiply as u8 => self.binary_operations('*'),
+                x if x == OpCode::Divide as u8 => self.binary_operations('/'),
                 x if x == OpCode::GreaterThan as u8 => self.comparison_operations(">"),
                 x if x == OpCode::LessThan as u8 => self.comparison_operations("<"),
                 x if x == OpCode::GreaterThanEq as u8 => self.comparison_operations(">="),
                 x if x == OpCode::LessThanEq as u8 => self.comparison_operations("<="),
                 x if x == OpCode::EqualTo as u8 => self.comparison_operations("=="),
                 x if x == OpCode::NotEqualTo as u8 => self.comparison_operations("!="),
-                x if x == OpCode::Modulo as u8 => {
-                    if self.binary_operations('%') == CompileError {
-                        return CompileError;
-                    }
-                    continue;
-                }
+                x if x == OpCode::Modulo as u8 => self.binary_operations('%'),
                 x if x == OpCode::Print as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     print!("{}", value)
@@ -297,7 +263,7 @@ impl Vm {
         self.chunk.constants.values[index].clone()
     }
 
-    fn binary_operations(&mut self, op: char) -> InterpretResult {
+    fn binary_operations(&mut self, op: char) {
         let v2 = self.stack.pop().unwrap_or(Void);
         let v1 = self.stack.pop().unwrap_or(Void);
 
@@ -305,40 +271,24 @@ impl Vm {
             (Value::Float(v1), Value::Float(v2)) => {
                 self.stack
                     .push(Value::Float(Self::op(op, v1, *v2).unwrap_or(0.0)));
-                return InterpretResult::Ok;
             }
             (Value::Int(v1), Value::Int(v2)) => {
                 self.stack
                     .push(Value::Int(Self::op(op, v1, *v2).unwrap_or(0)));
-                return InterpretResult::Ok;
             }
             (Value::Float(v1), Value::Int(v2)) => {
                 self.stack
                     .push(Value::Float(Self::op(op, v1, *v2 as f64).unwrap_or(0.0)));
-                return InterpretResult::Ok;
             }
             (Value::Int(v1), Value::Float(v2)) => {
                 self.stack
                     .push(Value::Float(Self::op(op, *v1 as f64, *v2).unwrap_or(0.0)));
-                return InterpretResult::Ok;
             }
             (Value::Str(v1), Value::Str(v2)) => {
-                if op == '+' {
-                    self.stack.push(Value::Str(Arc::from(v1.to_string() + v2)));
-                    return InterpretResult::Ok;
-                } else {
-                    return self
-                        .compile_time_err(&format!("[{}] is not implmented for [{}]", op, "str"));
-                }
+                self.stack.push(Value::Str(Arc::from(v1.to_string() + v2)));
             }
             _ => {
-                return self.compile_time_err(&format!(
-                    "mismatched types cannot use [{} -> {}] with [{} -> {}] !",
-                    v1.cap(),
-                    v1,
-                    v2.cap(),
-                    v2
-                ));
+                return;
             }
         }
     }
@@ -407,15 +357,5 @@ impl Vm {
         eprintln!("[line {}] in code", line);
 
         InterpretResult::RuntimeError
-    }
-
-    fn compile_time_err(&mut self, message: &str) -> InterpretResult {
-        eprintln!("{}", message);
-
-        let instruction = self.ip - 1;
-        let line = self.chunk.line[instruction as usize];
-        eprintln!("[line {}] in code", line);
-
-        InterpretResult::CompileError
     }
 }

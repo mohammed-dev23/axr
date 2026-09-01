@@ -6,6 +6,28 @@ pub struct Parser {
     compiling_chunk: Chunk,
     compiler: Compiler,
     const_table: HashMap<String, Value>,
+    type_tag: Vec<TypeTag>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum TypeTag {
+    Int,
+    Float,
+    Str,
+    Bool,
+    Void,
+}
+
+impl fmt::Display for TypeTag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeTag::Int => write!(f, "int"),
+            TypeTag::Float => write!(f, "float"),
+            TypeTag::Bool => write!(f, "bool"),
+            TypeTag::Str => write!(f, "str"),
+            TypeTag::Void => write!(f, "void"),
+        }
+    }
 }
 
 pub struct Compiler {
@@ -18,6 +40,7 @@ pub struct Local {
     name: Token,
     depth: i32,
     is_mut: bool,
+    type_tag: TypeTag,
 }
 
 impl Compiler {
@@ -30,13 +53,18 @@ impl Compiler {
     }
 }
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    fmt::{self},
+    sync::Arc,
+};
 
 use crate::{
     chunk::{
         Chunk,
         OpCode::{self, GetLocal, SetLocal},
     },
+    compiler::TypeTag::Void,
     scanner::{
         Scanner, Token,
         TokenType::{self},
@@ -57,7 +85,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 43] = [
+static RULES: [ParseRule; 48] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -94,6 +122,7 @@ static RULES: [ParseRule; 43] = [
         infix: Some(Parser::binary),
         precedence: Precedence::Factor,
     }, // %
+    NONE_RULE, // :
     ParseRule {
         prefix: Some(Parser::unary),
         infix: None,
@@ -169,6 +198,10 @@ static RULES: [ParseRule; 43] = [
         infix: None,
         precedence: Precedence::None,
     }, // False
+    NONE_RULE, // Int
+    NONE_RULE, // Str
+    NONE_RULE, // Float
+    NONE_RULE, // Bool
     NONE_RULE, // Error
     NONE_RULE, // Eof
     ParseRule {
@@ -206,6 +239,7 @@ impl Parser {
             compiling_chunk: Chunk::new(),
             compiler: Compiler::new(),
             const_table: HashMap::new(),
+            type_tag: Vec::new(),
         }
     }
 
@@ -321,9 +355,11 @@ impl Parser {
         if value.contains(".") {
             let float_value: f64 = value.parse::<f64>().unwrap_or_default();
             self.emit_constant(Value::Float(float_value));
+            self.type_tag.push(TypeTag::Float);
         } else {
             let int_value: i64 = value.parse::<i64>().unwrap_or_default();
             self.emit_constant(Value::Int(int_value));
+            self.type_tag.push(TypeTag::Int);
         }
     }
 
@@ -357,6 +393,17 @@ impl Parser {
 
         self.parse_precedence(Precedence::Unary, scanner);
 
+        let type_tag = self.type_tag.pop().unwrap_or(Void);
+
+        match type_tag {
+            TypeTag::Int | TypeTag::Float => {}
+
+            _ => self.error(&format!(
+                "cannot use [{}] values with negate!, only numbers are allowed.",
+                type_tag
+            )),
+        }
+
         match operator_type {
             TokenType::Minus => self.emit_byte(OpCode::Negate as u8),
             TokenType::Bang => self.emit_byte(OpCode::Not as u8),
@@ -368,6 +415,28 @@ impl Parser {
         let operator_type = self.previous.token_type;
         let rule = Self::get_rule(operator_type);
         self.parse_precedence(rule.precedence, scanner);
+
+        let type_tag2 = self.type_tag.pop().unwrap_or(Void);
+        let type_tag1 = self.type_tag.pop().unwrap_or(Void);
+
+        match (type_tag1, type_tag2) {
+            (TypeTag::Int, TypeTag::Int) => {
+                self.type_tag.push(TypeTag::Int);
+            }
+            (TypeTag::Int, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
+            }
+            (TypeTag::Float, TypeTag::Int) => {
+                self.type_tag.push(TypeTag::Float);
+            }
+            (TypeTag::Str, TypeTag::Str) => {
+                self.type_tag.push(TypeTag::Str);
+            }
+            _ => self.error(&format!(
+                "mismatched types cannot use [{}] with [{}]",
+                type_tag1, type_tag2
+            )),
+        }
 
         match operator_type {
             TokenType::Plus => self.emit_byte(OpCode::Add as u8),
@@ -415,9 +484,18 @@ impl Parser {
 
     fn literal(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
         match self.previous.token_type {
-            TokenType::True => self.emit_byte(OpCode::True as u8),
-            TokenType::False => self.emit_byte(OpCode::False as u8),
-            TokenType::Void => self.emit_byte(OpCode::Void as u8),
+            TokenType::True => {
+                self.emit_byte(OpCode::True as u8);
+                self.type_tag.push(TypeTag::Bool);
+            }
+            TokenType::False => {
+                self.emit_byte(OpCode::False as u8);
+                self.type_tag.push(TypeTag::Bool);
+            }
+            TokenType::Void => {
+                self.emit_byte(OpCode::Void as u8);
+                self.type_tag.push(TypeTag::Void);
+            }
             _ => return,
         }
     }
@@ -540,10 +618,69 @@ impl Parser {
 
         self.parse_variable("Expect variable name.", scanner);
 
+        let type_annotation = self.match_consume(&TokenType::Colon, scanner);
+
+        let annotation_type = if type_annotation {
+            self.advance(scanner);
+            Some(self.previous.token_type)
+        } else {
+            None
+        };
+
         if self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
         } else {
             self.emit_byte(OpCode::Void as u8);
+            self.type_tag.push(TypeTag::Void);
+        }
+        let type_tag = self.type_tag.pop().unwrap_or(Void);
+
+        self.compiler.locals[self.compiler.local_count as usize - 1].type_tag = type_tag;
+
+        if let Some(at) = annotation_type {
+            match at {
+                TokenType::Int => {
+                    if type_tag != TypeTag::Int {
+                        self.error(&format!(
+                            "Mismatched types, expected [int] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Float => {
+                    if type_tag != TypeTag::Float {
+                        self.error(&format!(
+                            "Mismatched types, expected [float] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Str => {
+                    if type_tag != TypeTag::Str {
+                        self.error(&format!(
+                            "Mismatched types, expected [str] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Bool => {
+                    if type_tag != TypeTag::Bool {
+                        self.error(&format!(
+                            "Mismatched types, expected [bool] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Void => {
+                    if type_tag != TypeTag::Void {
+                        self.error(&format!(
+                            "Mismatched types, expected [void] found [{}]",
+                            type_tag
+                        ));
+                    };
+                }
+                _ => return,
+            }
         }
 
         self.consume(
@@ -657,15 +794,26 @@ impl Parser {
             return;
         }
 
-        let Some((arg, is_mut)) = self.resolve_local(name) else {
+        let Some((arg, is_mut, type_tag)) = self.resolve_local(name) else {
             self.error("");
             return;
         };
 
         if can_assign && is_mut && self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
+
+            let rhs_typetag = self.type_tag.pop().unwrap_or(Void);
+
+            if rhs_typetag != type_tag {
+                self.error(&format!(
+                    "Mismatched types, expected [{}] found [{}]",
+                    type_tag, rhs_typetag
+                ));
+            }
+
             self.emit_bytes(SetLocal as u8, arg);
         } else {
+            self.type_tag.push(type_tag);
             self.emit_bytes(GetLocal as u8, arg);
         }
     }
@@ -674,6 +822,7 @@ impl Parser {
         let raw = &self.previous.start;
         let trimmed = &raw[1..raw.len() - 1];
         self.emit_constant(Value::Str(Arc::from(trimmed)));
+        self.type_tag.push(TypeTag::Str);
     }
 
     fn block(&mut self, scanner: &mut Scanner) {
@@ -703,22 +852,25 @@ impl Parser {
 
     fn add_local(&mut self, name: Token) {
         self.compiler.locals.push(Local {
-            name,
+            name: name.clone(),
             depth: -1,
             is_mut: false,
+            type_tag: TypeTag::Void,
         });
         self.compiler.local_count += 1;
     }
 
-    fn resolve_local(&mut self, name: &Token) -> Option<(u8, bool)> {
+    fn resolve_local(&mut self, name: &Token) -> Option<(u8, bool, TypeTag)> {
         for i in 0..self.compiler.local_count {
             let local = &self.compiler.locals[i as usize];
             let is_mut = local.is_mut;
+            let type_tag = local.type_tag;
+
             if Self::identifiers_equal(name, &local.name) {
                 if local.depth == -1 {
                     self.error("Can't read local variable in its own initializer.");
                 }
-                return Some((i as u8, is_mut));
+                return Some((i as u8, is_mut, type_tag));
             }
         }
         None

@@ -1,13 +1,17 @@
 const SOME = 1000;
 
 fn main() {
-    let x = 1;
-    let z = 2;
+    let x : int = 1;
+    let z : int  = 2;
     println x + z + SOME;
 
     let ~v = "any";
     v = "None";
     println v;
+
+    let num1 : int = 8;
+    let num2 : int = 9;
+    let num_tot : int = num1 + num2;
 
     let v1 = "h";
     let v2 = "e";

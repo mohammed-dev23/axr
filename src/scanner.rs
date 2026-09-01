@@ -31,6 +31,7 @@ pub enum TokenType {
     Slash,      // /
     Star,       // *
     Modulo,     // %
+    Colon,      // :
 
     //One or two character tokens.
     Bang,         // !
@@ -66,6 +67,12 @@ pub enum TokenType {
     //Values of the boolean type
     True,
     False,
+
+    //Values of types
+    Int,
+    Str,
+    Float,
+    Bool,
 
     //Other
     Error,
@@ -138,6 +145,7 @@ impl<'s> Scanner<'s> {
             }
             '%' => self.make_token(TokenType::Modulo),
             '"' => self.strings(),
+            ':' => self.make_token(TokenType::Colon),
             x if x.is_numeric() => self.numbers(),
             x if x.is_alphabetic() => self.identifier(),
             _ => self.error_token("Unexpected character."),
@@ -289,6 +297,10 @@ impl<'s> Scanner<'s> {
             "println" => TokenType::Println,
             "const" => TokenType::Const,
             "fn" => TokenType::Fn,
+            "int" => TokenType::Int,
+            "float" => TokenType::Float,
+            "bool" => TokenType::Bool,
+            "str" => TokenType::Str,
             _ => TokenType::Identifier,
         }
     }
