@@ -1,4 +1,4 @@
-const SOME = 1000;
+const SOME : int = 1000;
 
 fn main() {
     let x : int = 1;
@@ -12,6 +12,9 @@ fn main() {
     let num1 : int = 8;
     let num2 : int = 9;
     let num_tot : int = num1 + num2;
+
+    let some_chars : char = 'c';
+    println some_chars;
 
     let v1 = "h";
     let v2 = "e";

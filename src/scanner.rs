@@ -47,6 +47,7 @@ pub enum TokenType {
     Identifier,
     String,
     Number,
+    Char,
 
     //Keywords.
     Print,
@@ -148,6 +149,7 @@ impl<'s> Scanner<'s> {
             ':' => self.make_token(TokenType::Colon),
             x if x.is_numeric() => self.numbers(),
             x if x.is_alphabetic() => self.identifier(),
+            '\'' => self.char(),
             _ => self.error_token("Unexpected character."),
         }
     }
@@ -252,6 +254,23 @@ impl<'s> Scanner<'s> {
         self.make_token(TokenType::String)
     }
 
+    fn char(&mut self) -> Token {
+        while self.peek() != '\'' && !self.is_at_end() {
+            if self.peek() == '\n' {
+                self.line += 1;
+            }
+
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            self.error_token(&"Unterminated char.");
+        }
+
+        self.advance();
+        self.make_token(TokenType::Char)
+    }
+
     fn numbers(&mut self) -> Token {
         while self.peek().is_numeric() {
             self.advance();
@@ -301,6 +320,7 @@ impl<'s> Scanner<'s> {
             "float" => TokenType::Float,
             "bool" => TokenType::Bool,
             "str" => TokenType::Str,
+            "char" => TokenType::Char,
             _ => TokenType::Identifier,
         }
     }

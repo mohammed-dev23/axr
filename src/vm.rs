@@ -43,7 +43,7 @@ impl Vm {
 
     pub fn interpret(&mut self, source: String) -> InterpretResult {
         let mut chunk = Chunk::new();
-        let mut compiler = compiler::Parser::new();
+        let mut compiler = compiler::core::Parser::new();
 
         if !compiler.compile(source, &mut chunk) {
             return InterpretResult::CompileError;
