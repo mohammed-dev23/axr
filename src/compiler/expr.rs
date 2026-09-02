@@ -160,13 +160,13 @@ impl Parser {
         let trimmed = &raw[1..raw.len() - 1];
         let into_chars: Vec<char> = trimmed.chars().collect();
 
-        if let Some(char) = into_chars.get(0) {
-            self.emit_constant(Value::Char(Arc::from(*char)));
-            self.type_tag.push(TypeTag::Char);
-        } else {
+        if into_chars.len() != 1 {
             self.error("Char type cannot contain more than one char.");
             return;
         }
+
+        self.emit_constant(Value::Char(into_chars[0]));
+        self.type_tag.push(TypeTag::Char);
     }
 
     pub fn const_value(&mut self, scanner: &mut Scanner) -> (Value, TypeTag) {
@@ -195,12 +195,12 @@ impl Parser {
                 let trimmed = &raw[1..raw.len() - 1];
                 let into_chars: Vec<char> = trimmed.chars().collect();
 
-                if let Some(char) = into_chars.get(0) {
-                    return (Value::Char(Arc::from(*char)), TypeTag::Char);
-                } else {
+                if into_chars.len() != 1 {
                     self.error("Char type cannot contain more than one char.");
                     return (Value::Void, TypeTag::Void);
                 }
+
+                (Value::Char(into_chars[0]), TypeTag::Char)
             }
             TokenType::Void => (Value::Void, TypeTag::Void),
             _ => {

@@ -8,7 +8,7 @@ pub enum Value {
     Float(f64),
     Int(i64),
     Str(Arc<str>),
-    Char(Arc<char>),
+    Char(char),
     Void,
 }
 

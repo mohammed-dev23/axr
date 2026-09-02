@@ -11,7 +11,7 @@ use crate::{
 
 pub struct Vm {
     chunk: Chunk,
-    ip: u8,
+    ip: usize,
     stack: Vec<Value>,
 }
 
