@@ -107,108 +107,40 @@ impl Vm {
                     match value {
                         Float(x) => self.stack.push(Value::Float(x.abs())),
                         Int(x) => self.stack.push(Value::Int(x.abs())),
-                        _ => {
-                            self.runtime_err(&format!(
-                                "cannot use {} for abs, only float/int values that are allowed",
-                                value,
-                            ));
-                            self.stack.push(value)
-                        }
+                        _ => {}
                     };
                 }
                 x if x == OpCode::Floor as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-
-                    if value.is_float() {
-                        self.stack.push(Value::Float(value.as_float().floor()));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for floor, only float values that are allowed",
-                            value,
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack.push(Value::Float(value.as_float().floor()));
                 }
                 x if x == OpCode::Ceil as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-
-                    if value.is_float() {
-                        self.stack.push(Value::Float(value.as_float().ceil()));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for ceil, only float values that are allowed",
-                            value,
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack.push(Value::Float(value.as_float().ceil()));
                 }
                 x if x == OpCode::Round as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-
-                    if value.is_float() {
-                        self.stack.push(Value::Float(value.as_float().round()));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for round, only float values that are allowed",
-                            value,
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack.push(Value::Float(value.as_float().round()));
                 }
                 x if x == OpCode::SquareRoot as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-
-                    if value.is_float() || value.is_int() {
-                        self.stack.push(Value::Float(value.as_float().sqrt()));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for sqrt, only float values that are allowed",
-                            value,
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack.push(Value::Float(value.as_float().sqrt()));
                 }
                 x if x == OpCode::IsEmpty as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-
-                    if value.is_str() {
-                        self.stack.push(Value::Bool(value.as_str().is_empty()));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for is_empty, jusr str vlaue that are allowed!",
-                            value
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack.push(Value::Bool(value.as_str().is_empty()));
                 }
                 x if x == OpCode::Trim as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-
-                    if value.is_str() {
-                        self.stack
-                            .push(Value::Str(Arc::from(value.as_str().trim())));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for trim, jusr str vlaue that are allowed!",
-                            value
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack
+                        .push(Value::Str(Arc::from(value.as_str().trim())));
                 }
                 x if x == OpCode::Reverse as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
 
-                    if value.is_str() {
-                        self.stack.push(Value::Str(Arc::from(
-                            value.as_str().chars().rev().collect::<String>(),
-                        )));
-                    } else {
-                        self.runtime_err(&format!(
-                            "cannot use {} for reverse, jusr str vlaue that are allowed!",
-                            value
-                        ));
-                        self.stack.push(value);
-                    }
+                    self.stack.push(Value::Str(Arc::from(
+                        value.as_str().chars().rev().collect::<String>(),
+                    )));
                 }
                 x if x == OpCode::True as u8 => {
                     self.stack.push(Value::Bool(true));
@@ -323,7 +255,7 @@ impl Vm {
             '*' => Some(v1 * v2),
             '/' => {
                 if v2 == R::default() {
-                    println!("Can not divide by zero!");
+                    eprintln!("Can not divide by zero!");
                     return None;
                 } else {
                     Some(v1 / v2)

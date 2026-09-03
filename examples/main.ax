@@ -3,22 +3,48 @@ const SOME : int = 1000;
 fn main() {
     let x : int = 1;
     let z : int  = 2;
-    println x + z + SOME;
+    println(x + z + SOME);
+
+    {
+        let z = "some data";
+        println(z);
+    }
+
+    println(z);
 
     let ~v = "any";
     v = "None";
-    println v;
+    println(v);
 
     let num1 : int = 8;
     let num2 : int = 9;
     let num_tot : int = num1 + num2;
+    println(num_tot);
 
     let some_chars : char = 'c';
-    println some_chars;
+    println(some_chars);
+
+    // abs() works
+    let neg_num : int = -1;
+    let abs_num : int = abs(neg_num);
+    println(abs_num);
+
+
+    // floor() works
+    let float_num : float = 9.9;
+    let num  = floor(float_num);
+    println(num);
+
+
+    //rev() works
+    let some_txt = "heyyy";
+    let rev_some_txt = rev(some_txt);
+    println(rev_some_txt);
+
 
     let v1 = "h";
     let v2 = "e";
     let v3 = "y";
     let v_full = v1 + v2 + v3;
-    println v_full;
+    println(v_full);
 }

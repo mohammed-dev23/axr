@@ -40,9 +40,15 @@ impl Parser {
             self.error("Statement must be insaid a fn body");
             return;
         }
-
+        self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
         self.expression(scanner);
-        self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
+        self.type_tag.pop();
+        self.consume(TokenType::RigtParen, "Expect ')' aftre value.", scanner);
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' at the end of the statement.",
+            scanner,
+        );
         self.emit_byte(OpCode::Print as u8);
     }
 
@@ -51,9 +57,15 @@ impl Parser {
             self.error("Statement must be insaid a fn body");
             return;
         }
-
+        self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
         self.expression(scanner);
-        self.consume(TokenType::Semicolon, "Expect ';' after value.", scanner);
+        self.type_tag.pop();
+        self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' at the end of the statement.",
+            scanner,
+        );
         self.emit_byte(OpCode::Println as u8);
     }
 

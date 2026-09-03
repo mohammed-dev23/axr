@@ -36,7 +36,7 @@ impl Parser {
     }
 
     pub fn resolve_local(&mut self, name: &Token) -> Option<(u8, bool, TypeTag)> {
-        for i in 0..self.compiler.local_count {
+        for i in (0..self.compiler.local_count).rev() {
             let local = &self.compiler.locals[i as usize];
             let is_mut = local.is_mut;
             let type_tag = local.type_tag;

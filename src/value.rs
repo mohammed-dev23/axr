@@ -1,6 +1,6 @@
 use std::{fmt, ops::Neg, sync::Arc};
 
-use crate::value::Value::{Bool, Char, Float, Int, Str, Void};
+use crate::value::Value::{Bool, Char, Float, Int, Str};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -12,40 +12,33 @@ pub enum Value {
     Void,
 }
 
+#[allow(warnings)]
 impl Value {
     pub fn is_float(&self) -> bool {
         match self {
             Float(_) => true,
-            Int(_) => false,
-            Bool(_) => false,
-            Str(_) => false,
-            Char(_) => false,
-            Void => false,
+            _ => false,
         }
     }
 
     pub fn is_int(&self) -> bool {
         match self {
-            Float(_) => false,
             Int(_) => true,
-            Bool(_) => false,
-            Str(_) => false,
-            Char(_) => false,
-            Void => false,
+            _ => false,
         }
     }
 
     pub fn is_str(&self) -> bool {
         match self {
-            Float(_) | Int(_) | Bool(_) | Char(_) | Void => false,
             Str(_) => true,
+            _ => false,
         }
     }
 
     pub fn is_bool(&self) -> bool {
         match self {
-            Float(_) | Int(_) | Str(_) | Char(_) | Void => false,
             Bool(_) => true,
+            _ => false,
         }
     }
 }

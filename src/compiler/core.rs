@@ -157,7 +157,7 @@ impl Parser {
                 return;
             } else {
                 match self.current.token_type {
-                    TokenType::Print | TokenType::Let => {
+                    TokenType::Print | TokenType::Let | TokenType::Const | TokenType::Println => {
                         return;
                     }
                     _ => continue,
