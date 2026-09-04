@@ -39,6 +39,9 @@ pub enum OpCode {
     Trim,
     Reverse,
 
+    //I/O Functions
+    Input,
+
     //Values of the boolean type
     True,
     False,
@@ -49,6 +52,7 @@ pub enum OpCode {
     SetLocal,
 
     //Other
+    Cast,
     Void,
     Pop,
 }

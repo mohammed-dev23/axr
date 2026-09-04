@@ -110,6 +110,16 @@ impl Parser {
             None
         };
 
+        self.expected_type = annotation_type.map(|t| match t {
+            TokenType::Int => TypeTag::Int,
+            TokenType::Str => TypeTag::Str,
+            TokenType::Bool => TypeTag::Bool,
+            TokenType::Float => TypeTag::Float,
+            TokenType::Char => TypeTag::Char,
+            TokenType::Unt => TypeTag::Unt,
+            _ => TypeTag::Void,
+        });
+
         if self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
         } else {
@@ -162,6 +172,14 @@ impl Parser {
                         ))
                     }
                 }
+                TokenType::Unt => {
+                    if type_tag != TypeTag::Unt {
+                        self.error(&format!(
+                            "Mismatched types, expected [unt] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
                 TokenType::Void => {
                     if type_tag != TypeTag::Void {
                         self.error(&format!(
@@ -199,6 +217,16 @@ impl Parser {
 
         self.advance(scanner);
         let annotation_type = self.previous.token_type;
+
+        self.expected_type = match annotation_type {
+            TokenType::Int => Some(TypeTag::Int),
+            TokenType::Str => Some(TypeTag::Str),
+            TokenType::Bool => Some(TypeTag::Bool),
+            TokenType::Float => Some(TypeTag::Float),
+            TokenType::Char => Some(TypeTag::Char),
+            TokenType::Unt => Some(TypeTag::Unt),
+            _ => Some(TypeTag::Void),
+        };
 
         self.consume(TokenType::Equal, "Expect '=' after const name.", scanner);
 
@@ -245,6 +273,14 @@ impl Parser {
                             type_tag
                         ))
                     }
+                }
+            }
+            TokenType::Unt => {
+                if type_tag != TypeTag::Unt {
+                    self.error(&format!(
+                        "Mismatched types, expected [unt] found [{}]",
+                        type_tag
+                    ));
                 }
             }
             TokenType::Void => {

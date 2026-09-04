@@ -24,6 +24,18 @@ impl Parser {
             (TypeTag::Str, TypeTag::Str) => {
                 self.type_tag.push(TypeTag::Str);
             }
+            (TypeTag::Unt, TypeTag::Unt) => {
+                self.type_tag.push(TypeTag::Unt);
+            }
+            (TypeTag::Unt, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
+            }
+            (TypeTag::Float, TypeTag::Unt) => {
+                self.type_tag.push(TypeTag::Unt);
+            }
+            (TypeTag::Float, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
+            }
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
                 type_tag1, type_tag2
@@ -75,7 +87,7 @@ impl Parser {
             }
 
             _ => self.error(&format!(
-                "cannot use [{}] values with negate!, only numbers are allowed.",
+                "cannot use [{}] values with negate!, only int/float are allowed.",
                 type_tag
             )),
         }
@@ -130,10 +142,21 @@ impl Parser {
             let float_value: f64 = value.parse::<f64>().unwrap_or_default();
             self.emit_constant(Value::Float(float_value));
             self.type_tag.push(TypeTag::Float);
+        } else if self.expected_type.is_some_and(|t| t == TypeTag::Unt) {
+            let unt_value = value.parse::<u64>().unwrap_or_default();
+            self.emit_constant(Value::Unt(unt_value));
+            self.type_tag.push(TypeTag::Unt);
         } else {
-            let int_value: i64 = value.parse::<i64>().unwrap_or_default();
-            self.emit_constant(Value::Int(int_value));
-            self.type_tag.push(TypeTag::Int);
+            let int_value = value.parse::<i64>();
+
+            if let Ok(int) = int_value {
+                self.emit_constant(Value::Int(int));
+                self.type_tag.push(TypeTag::Int);
+            } else {
+                let unt_value = value.parse::<u64>().unwrap_or_default();
+                self.emit_constant(Value::Unt(unt_value));
+                self.type_tag.push(TypeTag::Unt);
+            }
         }
     }
 
@@ -185,6 +208,9 @@ impl Parser {
                 if txt.contains('.') {
                     let value = txt.parse::<f64>().unwrap_or(0.0);
                     (Value::Float(value), TypeTag::Float)
+                } else if self.expected_type.is_some_and(|t| t == TypeTag::Unt) {
+                    let value = txt.parse::<u64>().unwrap_or(0);
+                    (Value::Unt(value), TypeTag::Unt)
                 } else {
                     let value = txt.parse::<i64>().unwrap_or(0);
                     (Value::Int(value), TypeTag::Int)
@@ -243,6 +269,41 @@ impl Parser {
 
     pub fn define_const(&mut self, name: String, value: Value, type_tag: &TypeTag) {
         self.const_table.insert(name, (value, *type_tag));
+    }
+
+    pub fn casting(&mut self, scanner: &mut Scanner) {
+        let type_tag = self.type_tag.pop().unwrap_or(Void);
+
+        self.advance(scanner);
+        let token = self.previous.token_type;
+
+        let target = match token {
+            TokenType::Int => TypeTag::Int,
+            TokenType::Unt => TypeTag::Unt,
+            TokenType::Float => TypeTag::Float,
+            TokenType::Str => TypeTag::Str,
+            TokenType::Bool => TypeTag::Bool,
+            TokenType::Char => TypeTag::Char,
+            _ => Void,
+        };
+
+        match (type_tag, target) {
+            (TypeTag::Str, _) => {
+                self.error(&format!("non-primitive cast: `str` to `{}`", target));
+            }
+            (TypeTag::Char, _) => {
+                self.error(&format!("non-primitive cast: `char` to `{}`", target));
+            }
+            (TypeTag::Bool, _) => {
+                self.error(&format!("non-primitive cast: `bool` to `{}`", target));
+            }
+            _ => {}
+        }
+
+        self.emit_byte(OpCode::Cast as u8);
+        self.emit_byte(target as u8);
+
+        self.type_tag.push(target);
     }
 }
 
@@ -438,5 +499,26 @@ impl Parser {
         self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
 
         self.emit_byte(OpCode::Reverse as u8);
+    }
+
+    pub fn input_expr(&mut self, scanner: &mut Scanner, _can_assign: bool) {
+        if self.compiler.scope_depth == 0 {
+            self.error("Statement must be insaid a fn body");
+            return;
+        }
+
+        let expected_type = self.expected_type.take().unwrap_or_else(|| {
+            self.error("input() needs a type context, e.g. `let x : str = input();`");
+            Void
+        });
+
+        self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
+        self.expression(scanner);
+        self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
+
+        self.emit_byte(OpCode::Input as u8);
+        self.emit_byte(expected_type as u8);
+
+        self.type_tag.push(expected_type);
     }
 }

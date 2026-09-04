@@ -11,6 +11,7 @@ pub enum Precedence {
     Comparison, // < > <= >=
     Term,       // + -
     Factor,     // * / %
+    To,         // casting
     Unary,      // - !
     Call,       // . ()
     PRIMARY,
@@ -29,7 +30,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 49] = [
+static RULES: [ParseRule; 54] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -67,6 +68,8 @@ static RULES: [ParseRule; 49] = [
         precedence: Precedence::Factor,
     }, // %
     NONE_RULE, // :
+    NONE_RULE, // [
+    NONE_RULE, // ]
     ParseRule {
         prefix: Some(Parser::unary),
         infix: None,
@@ -170,6 +173,16 @@ static RULES: [ParseRule; 49] = [
         precedence: Precedence::None,
     }, // Reverse
     ParseRule {
+        prefix: Some(Parser::input_expr),
+        infix: None,
+        precedence: Precedence::None,
+    }, // Input
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::casting),
+        precedence: Precedence::To,
+    }, // To
+    ParseRule {
         prefix: Some(Parser::literal),
         infix: None,
         precedence: Precedence::None,
@@ -183,6 +196,7 @@ static RULES: [ParseRule; 49] = [
     NONE_RULE, // Str
     NONE_RULE, // Float
     NONE_RULE, // Bool
+    NONE_RULE, // Unt
     NONE_RULE, // Error
     NONE_RULE, // Eof
     ParseRule {

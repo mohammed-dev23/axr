@@ -9,6 +9,7 @@ pub struct Parser {
     pub(in crate::compiler) compiler: Compiler,
     pub(in crate::compiler) const_table: HashMap<String, (Value, TypeTag)>,
     pub(in crate::compiler) type_tag: Vec<TypeTag>,
+    pub(in crate::compiler) expected_type: Option<TypeTag>,
 }
 
 pub struct Compiler {
@@ -24,6 +25,7 @@ pub enum TypeTag {
     Str,
     Bool,
     Char,
+    Unt,
     Void,
 }
 
@@ -36,6 +38,7 @@ impl fmt::Display for TypeTag {
             TypeTag::Str => write!(f, "str"),
             TypeTag::Void => write!(f, "void"),
             TypeTag::Char => write!(f, "char"),
+            TypeTag::Unt => write!(f, "unt"),
         }
     }
 }
@@ -61,6 +64,7 @@ impl Parser {
             compiler: Compiler::new(),
             const_table: HashMap::new(),
             type_tag: Vec::new(),
+            expected_type: None,
         }
     }
 

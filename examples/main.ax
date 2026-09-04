@@ -1,4 +1,5 @@
 const SOME : int = 1000;
+const NONE : unt = 123;
 
 fn main() {
     let x : int = 1;
@@ -41,10 +42,26 @@ fn main() {
     let rev_some_txt = rev(some_txt);
     println(rev_some_txt);
 
+    //input() works
+    let fname : str = input("enter your first name: ");
+    let sname : str = input("enter your family name: ");
+    let full_name = fname + " " + sname;
+    println("i'm honored for having you using my programming language dear " + full_name);
 
     let v1 = "h";
     let v2 = "e";
     let v3 = "y";
     let v_full = v1 + v2 + v3;
-    println(v_full);
+    println(v_full + " " + full_name);
+
+    let vv : unt =  1;
+    let g : unt = 1;
+    println(vv + g + NONE);
+
+    let n1 : float = 1.2;
+    let n2 : int = n1 to int;
+    println(n2);
+
+    let n3 : float = n2 to float;
+    println(n3 + 1.2);
 }

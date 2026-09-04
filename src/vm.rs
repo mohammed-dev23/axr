@@ -1,12 +1,16 @@
-use std::sync::Arc;
+use std::{
+    io::{Write, stdin, stdout},
+    sync::Arc,
+};
 
 use crate::{
     chunk::{
         Chunk,
         OpCode::{self},
     },
-    compiler,
-    value::Value::{self, Float, Int, Void},
+    compiler::{self, core::TypeTag},
+    value::Value::{self, Char, Float, Int, Str, Void},
+    vm::InterpretResult::{CompileError, RuntimeError},
 };
 
 pub struct Vm {
@@ -175,6 +179,66 @@ impl Vm {
                     let slot = self.read_byte();
                     self.stack[slot as usize] = self.peek();
                 }
+                x if x == OpCode::Input as u8 => {
+                    let expected_type = self.read_byte();
+                    let txt = self.stack.pop().unwrap_or(Void);
+
+                    print!("{}", txt);
+                    stdout().flush().unwrap();
+
+                    let mut input = String::new();
+                    stdin().read_line(&mut input).unwrap();
+                    let input = input.trim();
+
+                    let value = match expected_type {
+                        t if t == TypeTag::Int as u8 => {
+                            Int(input.parse::<i64>().unwrap_or_else(|_| {
+                                self.runtime_err(&format!("Expected int found {}", input));
+                                return 0;
+                            }))
+                        }
+                        t if t == TypeTag::Str as u8 => Str(Arc::from(input)),
+                        t if t == TypeTag::Float as u8 => {
+                            Float(input.parse::<f64>().unwrap_or_else(|_| {
+                                self.runtime_err(&format!("Expected float found {}", input));
+                                return 0.0;
+                            }))
+                        }
+                        t if t == TypeTag::Char as u8 => {
+                            let into_char: Vec<char> = input.chars().collect();
+
+                            if into_char.len() != 1 {
+                                self.runtime_err(
+                                    &format!("Char type cannot contain more than one char as an input. Expected char found {}" , input),
+                                );
+                            } else {
+                                Char(into_char[0]);
+                            }
+
+                            return RuntimeError;
+                        }
+                        _ => Void,
+                    };
+
+                    self.stack.push(value);
+                }
+                x if x == OpCode::Cast as u8 => {
+                    let target = self.read_byte();
+                    let value = self.stack.pop().unwrap_or(Void);
+
+                    match target {
+                        t if t == TypeTag::Int as u8 => {
+                            self.stack.push(Value::Int(value.cast_int().unwrap()))
+                        }
+                        t if t == TypeTag::Float as u8 => {
+                            self.stack.push(Value::Float(value.cast_float().unwrap()))
+                        }
+                        t if t == TypeTag::Unt as u8 => {
+                            self.stack.push(Value::Unt(value.cast_unt().unwrap()));
+                        }
+                        _ => return CompileError,
+                    }
+                }
                 _ => {}
             }
         }
@@ -218,6 +282,18 @@ impl Vm {
             }
             (Value::Str(v1), Value::Str(v2)) => {
                 self.stack.push(Value::Str(Arc::from(v1.to_string() + v2)));
+            }
+            (Value::Unt(v1), Value::Unt(v2)) => {
+                self.stack
+                    .push(Value::Unt(Self::op(op, v1, *v2).unwrap_or(0)));
+            }
+            (Value::Unt(v1), Value::Float(v2)) => {
+                self.stack
+                    .push(Value::Float(Self::op(op, *v1 as f64, *v2).unwrap_or(0.0)));
+            }
+            (Value::Float(v1), Value::Unt(v2)) => {
+                self.stack
+                    .push(Value::Float(Self::op(op, *v1, *v2 as f64).unwrap_or(0.0)));
             }
             _ => {
                 return;

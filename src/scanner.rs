@@ -19,19 +19,21 @@ pub struct Token {
 #[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub enum TokenType {
     //Single-character tokens.
-    LeftParen,  // (
-    RigtParen,  // )
-    LeftBrace,  // {
-    RightBrace, // }
-    Comma,      // ,
-    Dot,        // .
-    Minus,      // -
-    Plus,       // +
-    Semicolon,  // ;
-    Slash,      // /
-    Star,       // *
-    Modulo,     // %
-    Colon,      // :
+    LeftParen,    // (
+    RigtParen,    // )
+    LeftBrace,    // {
+    RightBrace,   // }
+    Comma,        // ,
+    Dot,          // .
+    Minus,        // -
+    Plus,         // +
+    Semicolon,    // ;
+    Slash,        // /
+    Star,         // *
+    Modulo,       // %
+    Colon,        // :
+    LeftBracket,  // [
+    RightBracket, // ]
 
     //One or two character tokens.
     Bang,         // !
@@ -64,6 +66,8 @@ pub enum TokenType {
     IsEmpty,
     Trim,
     Reverse,
+    Input,
+    To,
 
     //Values of the boolean type
     True,
@@ -74,6 +78,7 @@ pub enum TokenType {
     Str,
     Float,
     Bool,
+    Unt,
 
     //Other
     Error,
@@ -109,6 +114,8 @@ impl<'s> Scanner<'s> {
             ')' => self.make_token(TokenType::RigtParen),
             '{' => self.make_token(TokenType::LeftBrace),
             '}' => self.make_token(TokenType::RightBrace),
+            '[' => self.make_token(TokenType::LeftBracket),
+            ']' => self.make_token(TokenType::RightBracket),
             ';' => self.make_token(TokenType::Semicolon),
             ',' => self.make_token(TokenType::Comma),
             '.' => self.make_token(TokenType::Dot),
@@ -321,6 +328,9 @@ impl<'s> Scanner<'s> {
             "bool" => TokenType::Bool,
             "str" => TokenType::Str,
             "char" => TokenType::Char,
+            "input" => TokenType::Input,
+            "unt" => TokenType::Unt,
+            "to" => TokenType::To,
             _ => TokenType::Identifier,
         }
     }

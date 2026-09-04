@@ -1,6 +1,6 @@
 use std::{fmt, ops::Neg, sync::Arc};
 
-use crate::value::Value::{Bool, Char, Float, Int, Str};
+use crate::value::Value::{Array, Bool, Char, Float, Int, Str, Unt};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -9,6 +9,8 @@ pub enum Value {
     Int(i64),
     Str(Arc<str>),
     Char(char),
+    Unt(u64),
+    Array(Vec<Value>),
     Void,
 }
 
@@ -43,21 +45,18 @@ impl Value {
     }
 }
 
+#[allow(warnings)]
 impl Value {
     pub fn as_float(&self) -> f64 {
         match self {
             Float(x) => *x,
-            Int(x) => *x as f64,
             _ => f64::default(),
         }
     }
 
-    #[allow(warnings)]
-    // has not been used in the code yet !
     pub fn as_int(&self) -> i64 {
         match self {
-            Float(x) => *x as i64,
-            Int(x) => *x,
+            Int(x) => *x as i64,
             _ => i64::default(),
         }
     }
@@ -75,6 +74,48 @@ impl Value {
             _ => bool::default(),
         }
     }
+
+    pub fn as_unt(&self) -> u64 {
+        match self {
+            Unt(x) => *x,
+            _ => u64::default(),
+        }
+    }
+}
+
+impl Value {
+    pub fn cast_int(&self) -> Option<i64> {
+        match self {
+            Int(x) => Some(*x),
+            Float(x) => Some(*x as i64),
+            Unt(x) => Some(*x as i64),
+            Bool(x) => Some(*x as i64),
+            Char(x) => Some(*x as i64),
+            _ => None,
+        }
+    }
+
+    pub fn cast_float(&self) -> Option<f64> {
+        match self {
+            Int(x) => Some(*x as f64),
+            Float(x) => Some(*x),
+            Unt(x) => Some(*x as f64),
+            Bool(x) => Some((*x as i64) as f64),
+            Char(x) => Some((*x as i64) as f64),
+            _ => None,
+        }
+    }
+
+    pub fn cast_unt(&self) -> Option<u64> {
+        match self {
+            Int(x) => Some(*x as u64),
+            Float(x) => Some(*x as u64),
+            Unt(x) => Some(*x),
+            Bool(x) => Some(*x as u64),
+            Char(x) => Some(*x as u64),
+            _ => None,
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -85,6 +126,8 @@ impl fmt::Display for Value {
             Value::Int(x) => write!(f, "{}", x),
             Value::Str(x) => write!(f, "{}", x),
             Value::Char(x) => write!(f, "{}", x),
+            Value::Unt(x) => write!(f, "{}", x),
+            Value::Array(x) => write!(f, "{:?}", x),
             Value::Void => write!(f, "Void"),
         }
     }
@@ -100,6 +143,8 @@ impl Neg for Value {
             Self::Bool(x) => Bool(x),
             Self::Str(x) => Str(x),
             Self::Char(x) => Char(x),
+            Self::Unt(x) => Unt(x),
+            Self::Array(x) => Array(x),
             Self::Void => Self::Void,
         }
     }

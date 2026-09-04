@@ -18,7 +18,6 @@ mod vm;
 mod tests;
 
 fn main() -> std::io::Result<()> {
-    cli()?;
     Vm::new().interpret(cli()?);
     Ok(())
 }
