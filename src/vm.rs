@@ -9,7 +9,7 @@ use crate::{
         OpCode::{self},
     },
     compiler::{self, core::TypeTag},
-    value::Value::{self, Char, Float, Int, Str, Void},
+    value::Value::{self, Char, Float, Int, Str, Unt, Void},
     vm::InterpretResult::{CompileError, RuntimeError},
 };
 
@@ -217,6 +217,12 @@ impl Vm {
 
                             return RuntimeError;
                         }
+                        t if t == TypeTag::Unt as u8 => {
+                            Unt(input.parse::<u64>().unwrap_or_else(|_| {
+                                self.runtime_err(&format!("Expected unt found {}", input));
+                                return 0;
+                            }))
+                        }
                         _ => Void,
                     };
 
@@ -239,6 +245,17 @@ impl Vm {
                         _ => return CompileError,
                     }
                 }
+                x if x == OpCode::JumpIfFalse as u8 => {
+                    let offset = self.read_short();
+
+                    if !self.peek().as_bool() {
+                        self.ip += offset as usize
+                    }
+                }
+                x if x == OpCode::Jump as u8 => {
+                    let offset = self.read_short();
+                    self.ip += offset as usize;
+                }
                 _ => {}
             }
         }
@@ -248,6 +265,12 @@ impl Vm {
         let byte = self.chunk.code[self.ip as usize];
         self.ip += 1;
         byte
+    }
+
+    fn read_short(&mut self) -> u16 {
+        let high = self.read_byte() as u16;
+        let low = self.read_byte() as u16;
+        (high << 8) | low
     }
 
     fn peek(&mut self) -> Value {
@@ -310,6 +333,12 @@ impl Vm {
                 self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
             }
             (Value::Int(v1), Value::Int(v2)) => {
+                self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
+            }
+            (Value::Str(v1), Value::Str(v2)) => {
+                self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
+            }
+            (Value::Unt(v1), Value::Unt(v2)) => {
                 self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
             }
             _ => {}

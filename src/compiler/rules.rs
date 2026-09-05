@@ -30,7 +30,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 54] = [
+static RULES: [ParseRule; 58] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -182,6 +182,18 @@ static RULES: [ParseRule; 54] = [
         infix: Some(Parser::casting),
         precedence: Precedence::To,
     }, // To
+    NONE_RULE, // If
+    NONE_RULE, // Else
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::or_expr),
+        precedence: Precedence::Or,
+    }, // Or
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::and_expr),
+        precedence: Precedence::And,
+    }, // And
     ParseRule {
         prefix: Some(Parser::literal),
         infix: None,

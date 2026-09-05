@@ -68,6 +68,10 @@ pub enum TokenType {
     Reverse,
     Input,
     To,
+    If,
+    Else,
+    Or,
+    And,
 
     //Values of the boolean type
     True,
@@ -254,7 +258,7 @@ impl<'s> Scanner<'s> {
         }
 
         if self.is_at_end() {
-            self.error_token(&"Unterminated string.");
+            return self.error_token(&"Unterminated string.");
         }
 
         self.advance();
@@ -331,6 +335,10 @@ impl<'s> Scanner<'s> {
             "input" => TokenType::Input,
             "unt" => TokenType::Unt,
             "to" => TokenType::To,
+            "if" => TokenType::If,
+            "else" => TokenType::Else,
+            "or" => TokenType::Or,
+            "and" => TokenType::And,
             _ => TokenType::Identifier,
         }
     }

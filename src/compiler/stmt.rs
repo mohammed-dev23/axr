@@ -31,6 +31,10 @@ impl Parser {
                 self.match_consume(&token, scanner);
                 self.fn_declaration(scanner);
             }
+            TokenType::If => {
+                self.match_consume(&TokenType::If, scanner);
+                self.if_stmt(scanner);
+            }
             _ => self.expression_statement(scanner),
         }
     }
@@ -318,5 +322,23 @@ impl Parser {
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' after block.", scanner);
+    }
+
+    pub fn if_stmt(&mut self, scanner: &mut Scanner) {
+        self.expression(scanner);
+
+        let then_jump = self.emit_jump(OpCode::JumpIfFalse as u8);
+        self.emit_byte(OpCode::Pop as u8);
+        self.statement(scanner);
+
+        let else_jump = self.emit_jump(OpCode::Jump as u8);
+
+        self.patch_jump(then_jump as u16);
+
+        self.emit_byte(OpCode::Pop as u8);
+        if self.match_consume(&TokenType::Else, scanner) {
+            self.statement(scanner);
+        }
+        self.patch_jump(else_jump as u16);
     }
 }

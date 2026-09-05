@@ -51,6 +51,10 @@ pub enum OpCode {
     GetLocal,
     SetLocal,
 
+    //Control flow
+    JumpIfFalse,
+    Jump,
+
     //Other
     Cast,
     Void,

@@ -47,6 +47,24 @@ impl Parser {
         self.make_constant(Value::Str(Arc::from(name.start.to_string())))
     }
 
+    pub fn emit_jump(&mut self, instruction: u8) -> u8 {
+        self.emit_byte(instruction);
+        self.emit_byte(0xff);
+        self.emit_byte(0xff);
+        return (&self.current_chunk().code.len() - 2) as u8;
+    }
+
+    pub fn patch_jump(&mut self, offset: u16) {
+        let jump = (self.current_chunk().code.len()) as u16 - offset - 2;
+
+        if jump as u16 > u16::MAX {
+            self.error("Too much code to jump over.");
+        }
+
+        self.compiling_chunk.code[offset as usize] = ((jump >> 8) & 0xff) as u8;
+        self.compiling_chunk.code[(offset + 1) as usize] = (jump & 0xff) as u8;
+    }
+
     fn current_chunk(&mut self) -> &mut Chunk {
         &mut self.compiling_chunk
     }
