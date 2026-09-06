@@ -43,6 +43,13 @@ impl Value {
             _ => false,
         }
     }
+
+    pub fn is_array(&self) -> bool {
+        match self {
+            Array(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[allow(warnings)]
@@ -79,6 +86,13 @@ impl Value {
         match self {
             Unt(x) => *x,
             _ => u64::default(),
+        }
+    }
+
+    pub fn as_array(&self) -> Vec<Value> {
+        match self {
+            Array(x) => x.clone(),
+            _ => Vec::new(),
         }
     }
 }

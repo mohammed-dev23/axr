@@ -1,15 +1,9 @@
 fn main() {
-    let data : str = input("enter your master key to show your username and password: ");
-    let age : unt = input("enter your age.. : ");
+    let array = ["1" , "2" , "3" , "4" , "5"];
+    println(array);
+    let x1 = array[0 to unt];
+    let x2 = array[1 to unt];
 
-    if is_empty(data) or age == 0 to unt {
-        println("you have entered nothing!.");
-    } else {
-        if trim(data) == "mj" and age == 18 to unt  {
-            println("your username is : mj_f");
-            println("your password is : nah_mj_king_w");
-        } else {
-            println("wrong master key / age !");
-        }
-    }
+    println(x);
+    println(z);
 }

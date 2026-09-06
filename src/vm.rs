@@ -9,8 +9,8 @@ use crate::{
         OpCode::{self},
     },
     compiler::{self, core::TypeTag},
-    value::Value::{self, Char, Float, Int, Str, Unt, Void},
-    vm::InterpretResult::{CompileError, RuntimeError},
+    value::Value::{self, Array, Char, Float, Int, Str, Unt, Void},
+    vm::InterpretResult::CompileError,
 };
 
 pub struct Vm {
@@ -206,16 +206,18 @@ impl Vm {
                         }
                         t if t == TypeTag::Char as u8 => {
                             let into_char: Vec<char> = input.chars().collect();
+                            let c: Value;
 
                             if into_char.len() != 1 {
                                 self.runtime_err(
                                     &format!("Char type cannot contain more than one char as an input. Expected char found {}" , input),
                                 );
+                                return InterpretResult::RuntimeError;
                             } else {
-                                Char(into_char[0]);
-                            }
+                                c = Char(into_char[0]);
+                            };
 
-                            return RuntimeError;
+                            c
                         }
                         t if t == TypeTag::Unt as u8 => {
                             Unt(input.parse::<u64>().unwrap_or_else(|_| {
@@ -255,6 +257,31 @@ impl Vm {
                 x if x == OpCode::Jump as u8 => {
                     let offset = self.read_short();
                     self.ip += offset as usize;
+                }
+                x if x == OpCode::Loop as u8 => {
+                    let offset = self.read_short();
+                    self.ip -= offset as usize
+                }
+                x if x == OpCode::Array as u8 => {
+                    let mut array: Vec<Value> = Vec::new();
+                    let array_len = self.read_byte();
+
+                    for _ in 0..array_len {
+                        let value = self.stack.pop().unwrap_or(Void);
+                        array.push(value);
+                    }
+
+                    array.reverse();
+                    self.stack.push(Array(array));
+                }
+                x if x == OpCode::IndexArray as u8 => {
+                    let index = self.stack.pop().unwrap_or(Void);
+                    let array = self.stack.pop().unwrap_or(Void);
+
+                    if array.is_array() {
+                        let array = array.as_array();
+                        self.stack.push(array[index.as_unt() as usize].clone());
+                    }
                 }
                 _ => {}
             }
@@ -339,6 +366,9 @@ impl Vm {
                 self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
             }
             (Value::Unt(v1), Value::Unt(v2)) => {
+                self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
+            }
+            (Value::Char(v1), Value::Char(v2)) => {
                 self.stack.push(Value::Bool(Self::cmp_op(op, v1, v2)));
             }
             _ => {}

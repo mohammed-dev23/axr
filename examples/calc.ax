@@ -1,0 +1,29 @@
+fn main() {
+    println("      ---this is MaCalc---      ");
+    println(" --basic binary calculater made in Axr-- ");
+
+    loop {
+        let n1 : int = input(">1>-enter an num: ");
+        let n2 : int = input(">2>-enter an num: ");
+        let op : str = input(">> enter a op you want to make (+ , - , / , *): ");
+
+
+        if n1 == 0 or n2 == 0 or op == " " {
+            println(">>you have not entered a op kind please try again!");
+            skip;
+        }
+
+        if op == "+" {
+            println(n1 + n2);
+        } else if op == "-" {
+            println(n1 - n2);
+        } else if op == "/" {
+            println(n1 / n2);
+        } else if op == "*" {
+            println(n1 * n2);
+        } else {
+            println("unexpected op: " + op);
+            stop;
+        }
+    }
+}

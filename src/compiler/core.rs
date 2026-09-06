@@ -10,12 +10,18 @@ pub struct Parser {
     pub(in crate::compiler) const_table: HashMap<String, (Value, TypeTag)>,
     pub(in crate::compiler) type_tag: Vec<TypeTag>,
     pub(in crate::compiler) expected_type: Option<TypeTag>,
+    pub(in crate::compiler) control_flow: ControlFlow,
 }
 
 pub struct Compiler {
     pub(in crate::compiler) locals: Vec<Local>,
     pub(in crate::compiler) local_count: i32,
     pub(in crate::compiler) scope_depth: i32,
+}
+
+pub struct ControlFlow {
+    pub loop_starts: Vec<usize>,
+    pub stops: Vec<Vec<u8>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -65,6 +71,10 @@ impl Parser {
             const_table: HashMap::new(),
             type_tag: Vec::new(),
             expected_type: None,
+            control_flow: ControlFlow {
+                loop_starts: Vec::new(),
+                stops: Vec::new(),
+            },
         }
     }
 
@@ -153,7 +163,7 @@ impl Parser {
         self.error_at_current(message);
     }
 
-    pub fn synchronize(&mut self) {
+    pub fn synchronize(&mut self, scanner: &mut Scanner) {
         self.painc_mode = false;
 
         while self.current.token_type != TokenType::Eof {
@@ -164,7 +174,7 @@ impl Parser {
                     TokenType::Print | TokenType::Let | TokenType::Const | TokenType::Println => {
                         return;
                     }
-                    _ => continue,
+                    _ => self.advance(scanner),
                 }
             }
         }

@@ -109,10 +109,13 @@ impl Parser {
             TypeTag::Float => {
                 self.type_tag.push(TypeTag::Float);
             }
+            TypeTag::Bool => {
+                self.type_tag.push(TypeTag::Bool);
+            }
 
             _ => self.error(&format!(
-                "cannot use [{}] values with negate!, only int/float are allowed.",
-                type_tag
+                "cannot use [{}] values with [{:?}].",
+                type_tag, operator_type
             )),
         }
 
@@ -207,6 +210,57 @@ impl Parser {
         let trimmed = &raw[1..raw.len() - 1];
         self.emit_constant(Value::Str(Arc::from(trimmed)));
         self.type_tag.push(TypeTag::Str);
+    }
+
+    pub fn array(&mut self, scanner: &mut Scanner, _can_assign: bool) {
+        let mut array_len = 0;
+        let mut type_tag: Vec<TypeTag> = Vec::new();
+
+        self.expression(scanner);
+        array_len += 1;
+        type_tag.push(self.type_tag.pop().unwrap_or(Void));
+
+        while self.current.token_type == TokenType::Comma {
+            self.match_consume(&TokenType::Comma, scanner);
+            self.expression(scanner);
+            array_len += 1;
+            type_tag.push(self.type_tag.pop().unwrap_or(Void));
+        }
+
+        if let Some(first) = type_tag.first() {
+            if !type_tag.iter().all(|t| t == first) {
+                self.error("Arrays must contain the same type for all of its slots.");
+            }
+        }
+
+        self.consume(
+            TokenType::RightBracket,
+            "Expected ']' at the end of array",
+            scanner,
+        );
+
+        self.emit_byte(OpCode::Array as u8);
+        self.emit_byte(array_len as u8);
+    }
+
+    pub fn index_array(&mut self, scanner: &mut Scanner) {
+        self.expression(scanner);
+        let type_tag = self.type_tag.last().unwrap_or(&Void);
+
+        if type_tag != &TypeTag::Unt {
+            self.error(&format!(
+                "Expected unt type in indexing found [{}]",
+                type_tag
+            ));
+        }
+
+        self.consume(
+            TokenType::RightBracket,
+            "Expected ']' at the end of array",
+            scanner,
+        );
+
+        self.emit_byte(OpCode::IndexArray as u8);
     }
 
     pub fn char(&mut self, _scanner: &mut Scanner, _can_assign: bool) {

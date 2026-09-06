@@ -54,6 +54,11 @@ pub enum OpCode {
     //Control flow
     JumpIfFalse,
     Jump,
+    Loop,
+
+    //Collocations
+    Array,
+    IndexArray,
 
     //Other
     Cast,

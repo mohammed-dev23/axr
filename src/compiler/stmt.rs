@@ -1,3 +1,5 @@
+use crate::chunk::OpCode::Jump;
+
 use super::*;
 
 impl Parser {
@@ -32,8 +34,24 @@ impl Parser {
                 self.fn_declaration(scanner);
             }
             TokenType::If => {
-                self.match_consume(&TokenType::If, scanner);
+                self.match_consume(&token, scanner);
                 self.if_stmt(scanner);
+            }
+            TokenType::While => {
+                self.match_consume(&token, scanner);
+                self.while_stmt(scanner);
+            }
+            TokenType::Loop => {
+                self.match_consume(&token, scanner);
+                self.loop_stmt(scanner);
+            }
+            TokenType::Stop => {
+                self.match_consume(&token, scanner);
+                self.stop_stmt(scanner);
+            }
+            TokenType::Skip => {
+                self.match_consume(&token, scanner);
+                self.skip_stmt(scanner);
             }
             _ => self.expression_statement(scanner),
         }
@@ -83,7 +101,7 @@ impl Parser {
         self.statement(scanner);
 
         if self.painc_mode {
-            self.synchronize();
+            self.synchronize(scanner);
         }
     }
 
@@ -337,8 +355,79 @@ impl Parser {
 
         self.emit_byte(OpCode::Pop as u8);
         if self.match_consume(&TokenType::Else, scanner) {
-            self.statement(scanner);
+            if self.match_consume(&TokenType::If, scanner) {
+                self.if_stmt(scanner);
+            } else {
+                self.statement(scanner);
+            }
         }
         self.patch_jump(else_jump as u16);
+    }
+
+    pub fn while_stmt(&mut self, scanner: &mut Scanner) {
+        let loop_start = self.compiling_chunk.code.len();
+        self.control_flow.loop_starts.push(loop_start);
+        self.control_flow.stops.push(Vec::new());
+        self.expression(scanner);
+
+        let exit_jump = self.emit_jump(OpCode::JumpIfFalse as u8);
+        self.emit_byte(OpCode::Pop as u8);
+        self.statement(scanner);
+        self.emit_loop(loop_start);
+
+        self.patch_jump(exit_jump as u16);
+        self.emit_byte(OpCode::Pop as u8);
+
+        self.control_flow.loop_starts.pop();
+        for i in self.control_flow.stops.pop().unwrap() {
+            self.patch_jump(i as u16);
+        }
+    }
+
+    pub fn loop_stmt(&mut self, scanner: &mut Scanner) {
+        let loop_start = self.compiling_chunk.code.len();
+        self.control_flow.loop_starts.push(loop_start);
+        self.control_flow.stops.push(Vec::new());
+
+        self.statement(scanner);
+        self.emit_loop(loop_start);
+
+        self.control_flow.loop_starts.pop();
+        for i in self.control_flow.stops.pop().unwrap() {
+            self.patch_jump(i as u16);
+        }
+    }
+
+    pub fn stop_stmt(&mut self, scanner: &mut Scanner) {
+        if self.control_flow.stops.is_empty() {
+            self.error("'stop' used outside of a loop.");
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+            scanner,
+        );
+
+        let exit_jump = self.emit_jump(Jump as u8);
+
+        if let Some(jumps) = self.control_flow.stops.last_mut() {
+            jumps.push(exit_jump as u8);
+        }
+    }
+
+    pub fn skip_stmt(&mut self, scanner: &mut Scanner) {
+        if self.control_flow.loop_starts.is_empty() {
+            self.error("'skip' used outside of a loop.");
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+            scanner,
+        );
+
+        let loop_start = self.control_flow.loop_starts.pop().unwrap();
+        self.emit_loop(loop_start);
     }
 }

@@ -44,6 +44,7 @@ pub enum TokenType {
     GreaterEqual, // >=
     Lesser,       // <
     LesserEqual,  // <=
+    FatArrowLeft, // =>
 
     //Literals.
     Identifier,
@@ -72,6 +73,10 @@ pub enum TokenType {
     Else,
     Or,
     And,
+    While,
+    Loop,
+    Stop,
+    Skip,
 
     //Values of the boolean type
     True,
@@ -137,6 +142,8 @@ impl<'s> Scanner<'s> {
             '=' => {
                 if self.match_tokens('=') {
                     self.make_token(TokenType::EqualEqual)
+                } else if self.match_tokens('>') {
+                    self.make_token(TokenType::FatArrowLeft)
                 } else {
                     self.make_token(TokenType::Equal)
                 }
@@ -339,6 +346,10 @@ impl<'s> Scanner<'s> {
             "else" => TokenType::Else,
             "or" => TokenType::Or,
             "and" => TokenType::And,
+            "while" => TokenType::While,
+            "loop" => TokenType::Loop,
+            "stop" => TokenType::Stop,
+            "skip" => TokenType::Skip,
             _ => TokenType::Identifier,
         }
     }

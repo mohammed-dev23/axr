@@ -65,6 +65,19 @@ impl Parser {
         self.compiling_chunk.code[(offset + 1) as usize] = (jump & 0xff) as u8;
     }
 
+    pub fn emit_loop(&mut self, loop_start: usize) {
+        self.emit_byte(OpCode::Loop as u8);
+
+        let offset = self.compiling_chunk.code.len() - loop_start + 2;
+
+        if offset > u16::MAX as usize {
+            self.error("Loop body too large.");
+        }
+
+        self.emit_byte(((offset >> 8) & 0xff) as u8);
+        self.emit_byte((offset & 0xff) as u8);
+    }
+
     fn current_chunk(&mut self) -> &mut Chunk {
         &mut self.compiling_chunk
     }
