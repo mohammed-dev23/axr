@@ -3,13 +3,14 @@ pub mod core;
 pub mod emit;
 pub mod expr;
 pub mod locals;
+pub mod methode;
 pub mod rules;
 pub mod stmt;
 
 use crate::{
     chunk::{Chunk, OpCode},
     compiler::{
-        core::{Parser, TypeTag},
+        core::{Parser, TypeId, TypeTag, TypeTag::Id},
         locals::Local,
         rules::Precedence,
     },

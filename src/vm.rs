@@ -8,8 +8,8 @@ use crate::{
         Chunk,
         OpCode::{self},
     },
-    compiler::{self, core::TypeTag},
-    value::Value::{self, Array, Char, Float, Int, Str, Unt, Void},
+    compiler::{self, core::TypeTag::Id},
+    value::Value::{self, Array, Char, Int, Str, Unt, Void},
     vm::InterpretResult::CompileError,
 };
 
@@ -109,7 +109,7 @@ impl Vm {
                     let value = self.stack.pop().unwrap_or(Void);
 
                     match value {
-                        Float(x) => self.stack.push(Value::Float(x.abs())),
+                        Value::Float(x) => self.stack.push(Value::Float(x.abs())),
                         Int(x) => self.stack.push(Value::Int(x.abs())),
                         _ => {}
                     };
@@ -142,9 +142,17 @@ impl Vm {
                 x if x == OpCode::Reverse as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
 
-                    self.stack.push(Value::Str(Arc::from(
-                        value.as_str().chars().rev().collect::<String>(),
-                    )));
+                    if value.is_str() {
+                        self.stack.push(Value::Str(Arc::from(
+                            value.as_str().chars().rev().collect::<String>(),
+                        )));
+                    }
+
+                    if value.is_array() {
+                        let mut array = value.as_array();
+                        array.reverse();
+                        self.stack.push(Value::Array(array));
+                    }
                 }
                 x if x == OpCode::True as u8 => {
                     self.stack.push(Value::Bool(true));
@@ -191,20 +199,22 @@ impl Vm {
                     let input = input.trim();
 
                     let value = match expected_type {
-                        t if t == TypeTag::Int as u8 => {
+                        t if t == Id(compiler::core::TypeId::Int).as_bytes() => {
                             Int(input.parse::<i64>().unwrap_or_else(|_| {
                                 self.runtime_err(&format!("Expected int found {}", input));
                                 return 0;
                             }))
                         }
-                        t if t == TypeTag::Str as u8 => Str(Arc::from(input)),
-                        t if t == TypeTag::Float as u8 => {
-                            Float(input.parse::<f64>().unwrap_or_else(|_| {
+                        t if t == Id(compiler::core::TypeId::Str).as_bytes() => {
+                            Str(Arc::from(input))
+                        }
+                        t if t == Id(compiler::core::TypeId::Float).as_bytes() => {
+                            Value::Float(input.parse::<f64>().unwrap_or_else(|_| {
                                 self.runtime_err(&format!("Expected float found {}", input));
                                 return 0.0;
                             }))
                         }
-                        t if t == TypeTag::Char as u8 => {
+                        t if t == Id(compiler::core::TypeId::Char).as_bytes() => {
                             let into_char: Vec<char> = input.chars().collect();
                             let c: Value;
 
@@ -219,7 +229,7 @@ impl Vm {
 
                             c
                         }
-                        t if t == TypeTag::Unt as u8 => {
+                        t if t == Id(compiler::core::TypeId::Unt).as_bytes() => {
                             Unt(input.parse::<u64>().unwrap_or_else(|_| {
                                 self.runtime_err(&format!("Expected unt found {}", input));
                                 return 0;
@@ -235,13 +245,13 @@ impl Vm {
                     let value = self.stack.pop().unwrap_or(Void);
 
                     match target {
-                        t if t == TypeTag::Int as u8 => {
+                        t if t == Id(compiler::core::TypeId::Int).as_bytes() => {
                             self.stack.push(Value::Int(value.cast_int().unwrap()))
                         }
-                        t if t == TypeTag::Float as u8 => {
+                        t if t == Id(compiler::core::TypeId::Float).as_bytes() => {
                             self.stack.push(Value::Float(value.cast_float().unwrap()))
                         }
-                        t if t == TypeTag::Unt as u8 => {
+                        t if t == Id(compiler::core::TypeId::Unt).as_bytes() => {
                             self.stack.push(Value::Unt(value.cast_unt().unwrap()));
                         }
                         _ => return CompileError,

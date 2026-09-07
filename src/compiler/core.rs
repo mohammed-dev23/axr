@@ -1,3 +1,5 @@
+use crate::compiler::core::TypeId::Void;
+
 use super::*;
 
 pub struct Parser {
@@ -11,6 +13,7 @@ pub struct Parser {
     pub(in crate::compiler) type_tag: Vec<TypeTag>,
     pub(in crate::compiler) expected_type: Option<TypeTag>,
     pub(in crate::compiler) control_flow: ControlFlow,
+    pub(in crate::compiler) info: Info,
 }
 
 pub struct Compiler {
@@ -24,8 +27,19 @@ pub struct ControlFlow {
     pub stops: Vec<Vec<u8>>,
 }
 
+pub struct Info {
+    pub is_mut: Vec<bool>,
+    pub last_local_slot: Option<u8>,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum TypeTag {
+    Id(TypeId),
+    Array(TypeId),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum TypeId {
     Int,
     Float,
     Str,
@@ -35,16 +49,67 @@ pub enum TypeTag {
     Void,
 }
 
+impl TypeTag {
+    pub fn as_bytes(&self) -> u8 {
+        match self {
+            Id(x) => *x as u8,
+            Self::Array(x) => 0x80 | (*x as u8),
+        }
+    }
+
+    #[allow(warnings)]
+    pub fn from_bytes(byte: u8) -> Self {
+        let x = TypeId::from_byte(byte & 0x7f);
+
+        if byte & 0x80 != 0 {
+            TypeTag::Array(x)
+        } else {
+            TypeTag::Id(x)
+        }
+    }
+
+    pub fn as_typeid(&self) -> TypeId {
+        match self {
+            TypeTag::Array(x) => *x,
+            TypeTag::Id(x) => *x,
+        }
+    }
+}
+
+#[allow(warnings)]
+impl TypeId {
+    pub fn from_byte(byte: u8) -> Self {
+        match byte {
+            0 => TypeId::Int,
+            1 => TypeId::Float,
+            2 => TypeId::Str,
+            3 => TypeId::Bool,
+            4 => TypeId::Char,
+            5 => TypeId::Unt,
+            _ => Void,
+        }
+    }
+}
+
 impl fmt::Display for TypeTag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TypeTag::Int => write!(f, "int"),
-            TypeTag::Float => write!(f, "float"),
-            TypeTag::Bool => write!(f, "bool"),
-            TypeTag::Str => write!(f, "str"),
-            TypeTag::Void => write!(f, "void"),
-            TypeTag::Char => write!(f, "char"),
-            TypeTag::Unt => write!(f, "unt"),
+            TypeTag::Id(x) => write!(f, "{}", x),
+            TypeTag::Array(x) => write!(f, "Array[{}]", x),
+        }
+    }
+}
+
+impl fmt::Display for TypeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TypeId::Int => write!(f, "int"),
+            TypeId::Float => write!(f, "float"),
+            TypeId::Bool => write!(f, "bool"),
+            TypeId::Str => write!(f, "str"),
+            TypeId::Void => write!(f, "void"),
+            TypeId::Char => write!(f, "char"),
+            TypeId::Unt => write!(f, "unt"),
         }
     }
 }
@@ -74,6 +139,10 @@ impl Parser {
             control_flow: ControlFlow {
                 loop_starts: Vec::new(),
                 stops: Vec::new(),
+            },
+            info: Info {
+                is_mut: Vec::new(),
+                last_local_slot: Some(0),
             },
         }
     }
@@ -177,6 +246,127 @@ impl Parser {
                     _ => self.advance(scanner),
                 }
             }
+        }
+    }
+
+    pub fn type_check(&mut self, type_tag: TypeTag, token: &TokenType) {
+        match token {
+            TokenType::Int => {
+                if type_tag != Id(TypeId::Int) {
+                    self.error(&format!(
+                        "Mismatched types, expected [int] found [{}]",
+                        type_tag
+                    ));
+                }
+            }
+            TokenType::Float => {
+                if type_tag != Id(TypeId::Float) {
+                    self.error(&format!(
+                        "Mismatched types, expected [float] found [{}]",
+                        type_tag
+                    ));
+                }
+            }
+            TokenType::Str => {
+                if type_tag != Id(TypeId::Str) {
+                    self.error(&format!(
+                        "Mismatched types, expected [str] found [{}]",
+                        type_tag
+                    ));
+                }
+            }
+            TokenType::Bool => {
+                if type_tag != Id(TypeId::Bool) {
+                    self.error(&format!(
+                        "Mismatched types, expected [bool] found [{}]",
+                        type_tag
+                    ));
+                }
+            }
+            TokenType::Char => {
+                if type_tag != Id(TypeId::Char) {
+                    self.error(&format!(
+                        "Mismatched types, expected [char] found [{}]",
+                        type_tag
+                    ))
+                }
+            }
+            TokenType::Unt => {
+                if type_tag != Id(TypeId::Unt) {
+                    self.error(&format!(
+                        "Mismatched types, expected [unt] found [{}]",
+                        type_tag
+                    ));
+                }
+            }
+            TokenType::Void => {
+                if type_tag != Id(TypeId::Void) {
+                    self.error(&format!(
+                        "Mismatched types, expected [void] found [{}]",
+                        type_tag
+                    ));
+                };
+            }
+            TokenType::Array => match token {
+                TokenType::Int => {
+                    if type_tag != TypeTag::Array(TypeId::Int) {
+                        self.error(&format!(
+                            "Mismatched types, expected [int] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Float => {
+                    if type_tag != TypeTag::Array(TypeId::Float) {
+                        self.error(&format!(
+                            "Mismatched types, expected [float] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Str => {
+                    if type_tag != TypeTag::Array(TypeId::Str) {
+                        self.error(&format!(
+                            "Mismatched types, expected [str] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Bool => {
+                    if type_tag != TypeTag::Array(TypeId::Bool) {
+                        self.error(&format!(
+                            "Mismatched types, expected [bool] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Char => {
+                    if type_tag != TypeTag::Array(TypeId::Char) {
+                        self.error(&format!(
+                            "Mismatched types, expected [char] found [{}]",
+                            type_tag
+                        ))
+                    }
+                }
+                TokenType::Unt => {
+                    if type_tag != TypeTag::Array(TypeId::Unt) {
+                        self.error(&format!(
+                            "Mismatched types, expected [unt] found [{}]",
+                            type_tag
+                        ));
+                    }
+                }
+                TokenType::Void => {
+                    if type_tag != TypeTag::Array(TypeId::Void) {
+                        self.error(&format!(
+                            "Mismatched types, expected [void] found [{}]",
+                            type_tag
+                        ));
+                    };
+                }
+                _ => return,
+            },
+            _ => return,
         }
     }
 }

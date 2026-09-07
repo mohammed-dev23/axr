@@ -1,6 +1,6 @@
-use crate::chunk::OpCode::Jump;
-
 use super::*;
+use crate::chunk::OpCode::Jump;
+use crate::compiler::TypeTag::Id;
 
 impl Parser {
     pub fn statement(&mut self, scanner: &mut Scanner) {
@@ -132,86 +132,49 @@ impl Parser {
             None
         };
 
+        let array = if annotation_type.is_some_and(|t| t == TokenType::Array) {
+            self.consume(TokenType::LeftBracket, "Exp", scanner);
+
+            let array = match self.current.token_type {
+                TokenType::Int => TypeTag::Array(TypeId::Int),
+                TokenType::Unt => TypeTag::Array(TypeId::Unt),
+                TokenType::Float => TypeTag::Array(TypeId::Float),
+                TokenType::Str => TypeTag::Array(TypeId::Str),
+                TokenType::Bool => TypeTag::Array(TypeId::Bool),
+                TokenType::Char => TypeTag::Array(TypeId::Char),
+                _ => TypeTag::Array(TypeId::Void),
+            };
+
+            self.advance(scanner);
+            self.consume(TokenType::RightBracket, "exp", scanner);
+            array
+        } else {
+            TypeTag::Array(TypeId::Void)
+        };
+
         self.expected_type = annotation_type.map(|t| match t {
-            TokenType::Int => TypeTag::Int,
-            TokenType::Str => TypeTag::Str,
-            TokenType::Bool => TypeTag::Bool,
-            TokenType::Float => TypeTag::Float,
-            TokenType::Char => TypeTag::Char,
-            TokenType::Unt => TypeTag::Unt,
-            _ => TypeTag::Void,
+            TokenType::Int => Id(TypeId::Int),
+            TokenType::Str => Id(TypeId::Str),
+            TokenType::Bool => Id(TypeId::Bool),
+            TokenType::Float => Id(TypeId::Float),
+            TokenType::Char => Id(TypeId::Char),
+            TokenType::Unt => Id(TypeId::Unt),
+            TokenType::Array => array,
+            _ => Id(TypeId::Void),
         });
 
         if self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
         } else {
             self.emit_byte(OpCode::Void as u8);
-            self.type_tag.push(TypeTag::Void);
+            self.type_tag.push(Id(TypeId::Void));
         }
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
+        let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
 
         self.compiler.locals[self.compiler.local_count as usize - 1].type_tag = type_tag;
 
-        if let Some(at) = annotation_type {
-            match at {
-                TokenType::Int => {
-                    if type_tag != TypeTag::Int {
-                        self.error(&format!(
-                            "Mismatched types, expected [int] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Float => {
-                    if type_tag != TypeTag::Float {
-                        self.error(&format!(
-                            "Mismatched types, expected [float] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Str => {
-                    if type_tag != TypeTag::Str {
-                        self.error(&format!(
-                            "Mismatched types, expected [str] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Bool => {
-                    if type_tag != TypeTag::Bool {
-                        self.error(&format!(
-                            "Mismatched types, expected [bool] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Char => {
-                    if type_tag != TypeTag::Char {
-                        self.error(&format!(
-                            "Mismatched types, expected [char] found [{}]",
-                            type_tag
-                        ))
-                    }
-                }
-                TokenType::Unt => {
-                    if type_tag != TypeTag::Unt {
-                        self.error(&format!(
-                            "Mismatched types, expected [unt] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Void => {
-                    if type_tag != TypeTag::Void {
-                        self.error(&format!(
-                            "Mismatched types, expected [void] found [{}]",
-                            type_tag
-                        ));
-                    };
-                }
-                _ => return,
-            }
+        if let Some(token) = annotation_type {
+            self.type_check(type_tag, &token);
         }
 
         self.consume(
@@ -240,81 +203,40 @@ impl Parser {
         self.advance(scanner);
         let annotation_type = self.previous.token_type;
 
+        let array = {
+            self.consume(TokenType::LeftBracket, "Exp", scanner);
+
+            let array = match self.current.token_type {
+                TokenType::Int => TypeTag::Array(TypeId::Int),
+                TokenType::Unt => TypeTag::Array(TypeId::Unt),
+                TokenType::Float => TypeTag::Array(TypeId::Float),
+                TokenType::Str => TypeTag::Array(TypeId::Str),
+                TokenType::Bool => TypeTag::Array(TypeId::Bool),
+                TokenType::Char => TypeTag::Array(TypeId::Char),
+                _ => TypeTag::Array(TypeId::Void),
+            };
+
+            self.advance(scanner);
+            self.consume(TokenType::RightBracket, "Exp", scanner);
+            array
+        };
+
         self.expected_type = match annotation_type {
-            TokenType::Int => Some(TypeTag::Int),
-            TokenType::Str => Some(TypeTag::Str),
-            TokenType::Bool => Some(TypeTag::Bool),
-            TokenType::Float => Some(TypeTag::Float),
-            TokenType::Char => Some(TypeTag::Char),
-            TokenType::Unt => Some(TypeTag::Unt),
-            _ => Some(TypeTag::Void),
+            TokenType::Int => Some(Id(TypeId::Int)),
+            TokenType::Str => Some(Id(TypeId::Str)),
+            TokenType::Bool => Some(Id(TypeId::Bool)),
+            TokenType::Float => Some(Id(TypeId::Float)),
+            TokenType::Char => Some(Id(TypeId::Char)),
+            TokenType::Unt => Some(Id(TypeId::Unt)),
+            TokenType::Array => Some(array),
+            _ => Some(Id(TypeId::Void)),
         };
 
         self.consume(TokenType::Equal, "Expect '=' after const name.", scanner);
 
         let (const_value, type_tag) = self.const_value(scanner);
 
-        match &annotation_type {
-            TokenType::Int => {
-                if type_tag != TypeTag::Int {
-                    self.error(&format!(
-                        "Mismatched types, expected [int] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Float => {
-                if type_tag != TypeTag::Float {
-                    self.error(&format!(
-                        "Mismatched types, expected [float] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Str => {
-                if type_tag != TypeTag::Str {
-                    self.error(&format!(
-                        "Mismatched types, expected [str] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Bool => {
-                if type_tag != TypeTag::Bool {
-                    self.error(&format!(
-                        "Mismatched types, expected [bool] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Char => {
-                if type_tag != TypeTag::Char {
-                    if type_tag != TypeTag::Char {
-                        self.error(&format!(
-                            "Mismatched types, expected [char] found [{}]",
-                            type_tag
-                        ))
-                    }
-                }
-            }
-            TokenType::Unt => {
-                if type_tag != TypeTag::Unt {
-                    self.error(&format!(
-                        "Mismatched types, expected [unt] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Void => {
-                if type_tag != TypeTag::Void {
-                    self.error(&format!(
-                        "Mismatched types, expected [void] found [{}]",
-                        type_tag
-                    ));
-                };
-            }
-            _ => return,
-        }
+        self.type_check(type_tag, &annotation_type);
 
         self.consume(
             TokenType::Semicolon,

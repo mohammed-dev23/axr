@@ -55,18 +55,10 @@ pub enum TokenType {
     //Keywords.
     Print,
     Println,
-    Abs,
-    Floor,
-    Ceil,
-    Round,
     Let,
     Tilde,
     Const,
     Fn,
-    Sqrt,
-    IsEmpty,
-    Trim,
-    Reverse,
     Input,
     To,
     If,
@@ -88,6 +80,7 @@ pub enum TokenType {
     Float,
     Bool,
     Unt,
+    Array,
 
     //Other
     Error,
@@ -319,15 +312,7 @@ impl<'s> Scanner<'s> {
 
         match text {
             "print" => TokenType::Print,
-            "abs" => TokenType::Abs,
-            "floor" => TokenType::Floor,
-            "ceil" => TokenType::Ceil,
-            "Round" => TokenType::Round,
             "let" => TokenType::Let,
-            "sqrt" => TokenType::Sqrt,
-            "is_empty" => TokenType::IsEmpty,
-            "trim" => TokenType::Trim,
-            "rev" => TokenType::Reverse,
             "true" => TokenType::True,
             "false" => TokenType::False,
             "Void" => TokenType::Void,
@@ -350,6 +335,7 @@ impl<'s> Scanner<'s> {
             "loop" => TokenType::Loop,
             "stop" => TokenType::Stop,
             "skip" => TokenType::Skip,
+            "Array" => TokenType::Array,
             _ => TokenType::Identifier,
         }
     }

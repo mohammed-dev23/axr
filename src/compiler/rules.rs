@@ -30,7 +30,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 63] = [
+static RULES: [ParseRule; 55] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -40,7 +40,11 @@ static RULES: [ParseRule; 63] = [
     NONE_RULE, // {
     NONE_RULE, // }
     NONE_RULE, // ,
-    NONE_RULE, // .
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::methode),
+        precedence: Precedence::Call,
+    }, // .
     ParseRule {
         prefix: Some(Parser::unary),
         infix: Some(Parser::binary),
@@ -133,50 +137,10 @@ static RULES: [ParseRule; 63] = [
     }, // Char
     NONE_RULE, // Print
     NONE_RULE, // Println
-    ParseRule {
-        prefix: Some(Parser::abs_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Abs
-    ParseRule {
-        prefix: Some(Parser::floor_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Floor
-    ParseRule {
-        prefix: Some(Parser::ceil_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Ceil
-    ParseRule {
-        prefix: Some(Parser::round_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Round
     NONE_RULE, // Let
     NONE_RULE, // ~
     NONE_RULE, // Const
     NONE_RULE, // Fn
-    ParseRule {
-        prefix: Some(Parser::squareroot_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Sqrt
-    ParseRule {
-        prefix: Some(Parser::isempty_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // IsEmpty
-    ParseRule {
-        prefix: Some(Parser::trim_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Trim
-    ParseRule {
-        prefix: Some(Parser::rev_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Reverse
     ParseRule {
         prefix: Some(Parser::input_expr),
         infix: None,

@@ -30,7 +30,7 @@ impl Parser {
             name: name.clone(),
             depth: -1,
             is_mut: false,
-            type_tag: TypeTag::Void,
+            type_tag: Id(TypeId::Void),
         });
         self.compiler.local_count += 1;
     }
