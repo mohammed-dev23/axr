@@ -13,7 +13,16 @@ impl Parser {
         });
 
         self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
-        self.expression(scanner);
+
+        self.consume(
+            TokenType::String,
+            "input() requires a string literal prompt",
+            scanner,
+        );
+        let raw = &self.previous.start;
+        let trimmed = &raw[1..raw.len() - 1];
+        self.emit_constant(Value::Str(Arc::from(trimmed)));
+
         self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
 
         self.emit_byte(OpCode::Input as u8);

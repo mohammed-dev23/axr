@@ -25,6 +25,7 @@ pub struct Compiler {
 pub struct ControlFlow {
     pub loop_starts: Vec<usize>,
     pub stops: Vec<Vec<u8>>,
+    pub locals_in: Vec<i32>,
 }
 
 pub struct Info {
@@ -139,6 +140,7 @@ impl Parser {
             control_flow: ControlFlow {
                 loop_starts: Vec::new(),
                 stops: Vec::new(),
+                locals_in: Vec::new(),
             },
             info: Info {
                 is_mut: Vec::new(),
@@ -368,5 +370,11 @@ impl Parser {
             },
             _ => return,
         }
+    }
+
+    #[allow(warnings)]
+    pub fn debug_parser(&self, num: usize) {
+        println!("{} >> {}", self.previous.start, num);
+        println!("{} >> {}", self.current.start, num)
     }
 }

@@ -1,42 +1,29 @@
-const ARRAY : Array[int] = [1 , 2 , 3];
-
 fn main() {
-    println(ARRAY[2 to unt]);
+    loop {
+        let n1 : int = input("guss a num: ");
+        println(n1);
 
-    let array : Array[str] = ["1" , "2" , "3" , "4" , "5"];
-
-    let x1 = array[0 to unt];
-    let x2 = array[1 to unt];
-
-    println(x1);
-    println(x2);
-
-
-    //meathodes works
-    let x = "   some   ".trim();
-    let z : str = "";
-    println(x);
-
-    if x.is_empty() {
-        println("value x is empty");
-    } else {
-        println("value x is not empty");
+        match n1 {
+            1 => {
+                println("not there yet!.");
+                skip;
+            },
+            2 => {
+                println("you are getting closer son!.");
+                skip;
+            },
+            3 => {
+                println("you got itt!");
+                skip;
+            },
+            4 => {
+                println("you are drefting away :<");
+                skip;
+            },
+            _ => {
+                println("not even close cu ;<");
+                stop;
+            }
+        }
     }
-
-    if z.is_empty() {
-        println("value z is empty");
-    } else {
-        println("value z is not empty");
-    }
-
-    let ~new_array : Array[char] = ['o' , 'y'];
-    new_array.rev();
-    println(new_array[0 to unt]);
-
-    let some_num : unt =  18;
-    let sqrt_some_num : float = (some_num to float).sqrt();
-    println(sqrt_some_num);
-
-    let round_some_num = sqrt_some_num.round();
-    println(round_some_num);
 }

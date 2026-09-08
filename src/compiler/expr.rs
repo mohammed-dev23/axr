@@ -438,10 +438,10 @@ impl Parser {
     pub fn or_expr(&mut self, scanner: &mut Scanner) {
         let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
 
-        let else_jump = self.emit_jump(OpCode::JumpIfFalse as u8);
-        let end_jump = self.emit_jump(OpCode::Jump as u8);
+        let else_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
+        let end_jump = self.emit_jump(OpCode::Jump as usize);
 
-        self.patch_jump(else_jump as u16);
+        self.patch_jump(else_jump as usize);
         self.emit_byte(OpCode::Pop as u8);
 
         self.parse_precedence(Precedence::Or, scanner);
@@ -456,13 +456,13 @@ impl Parser {
         }
 
         self.type_tag.push(Id(TypeId::Bool));
-        self.patch_jump(end_jump as u16);
+        self.patch_jump(end_jump as usize);
     }
 
     pub fn and_expr(&mut self, scanner: &mut Scanner) {
         let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
 
-        let end_jump = self.emit_jump(OpCode::JumpIfFalse as u8);
+        let end_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         self.emit_byte(OpCode::Pop as u8);
 
         self.parse_precedence(Precedence::And, scanner);
@@ -477,6 +477,6 @@ impl Parser {
         }
 
         self.type_tag.push(Id(TypeId::Bool));
-        self.patch_jump(end_jump as u16);
+        self.patch_jump(end_jump as usize);
     }
 }

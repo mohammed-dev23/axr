@@ -8,22 +8,30 @@ fn main() {
         let op : str = input(">> enter a op you want to make (+ , - , / , *): ");
 
 
-        if n1 == 0 or n2 == 0 or op == " " {
+        if n1 == 0 or n2 == 0 or op.trim().is_empty() {
             println(">>you have not entered a op kind please try again!");
             skip;
         }
 
-        if op == "+" {
-            println(n1 + n2);
-        } else if op == "-" {
-            println(n1 - n2);
-        } else if op == "/" {
-            println(n1 / n2);
-        } else if op == "*" {
-            println(n1 * n2);
-        } else {
-            println("unexpected op: " + op);
-            stop;
+        match op.trim() {
+            "+" => {
+                println(n1 + n2);
+            },
+            "-" => {
+                println(n1 - n2);
+            },
+            "/" => {
+                println(n1 / n2);
+            },
+            "*" => {
+                println(n1 * n2);
+            },
+            _ => {
+                println("unexpected op: " + op);
+                stop;
+            }
         }
+
+        println("done!");
     }
 }

@@ -1,6 +1,7 @@
 use super::*;
 use crate::chunk::OpCode::Jump;
 use crate::compiler::TypeTag::Id;
+use crate::compiler::core::TypeId::Void;
 
 impl Parser {
     pub fn statement(&mut self, scanner: &mut Scanner) {
@@ -52,6 +53,10 @@ impl Parser {
             TokenType::Skip => {
                 self.match_consume(&token, scanner);
                 self.skip_stmt(scanner);
+            }
+            TokenType::Match => {
+                self.match_consume(&token, scanner);
+                self.match_stmt(scanner);
             }
             _ => self.expression_statement(scanner),
         }
@@ -267,13 +272,13 @@ impl Parser {
     pub fn if_stmt(&mut self, scanner: &mut Scanner) {
         self.expression(scanner);
 
-        let then_jump = self.emit_jump(OpCode::JumpIfFalse as u8);
+        let then_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         self.emit_byte(OpCode::Pop as u8);
         self.statement(scanner);
 
-        let else_jump = self.emit_jump(OpCode::Jump as u8);
+        let else_jump = self.emit_jump(OpCode::Jump as usize);
 
-        self.patch_jump(then_jump as u16);
+        self.patch_jump(then_jump as usize);
 
         self.emit_byte(OpCode::Pop as u8);
         if self.match_consume(&TokenType::Else, scanner) {
@@ -283,26 +288,27 @@ impl Parser {
                 self.statement(scanner);
             }
         }
-        self.patch_jump(else_jump as u16);
+        self.patch_jump(else_jump as usize);
     }
 
     pub fn while_stmt(&mut self, scanner: &mut Scanner) {
         let loop_start = self.compiling_chunk.code.len();
         self.control_flow.loop_starts.push(loop_start);
         self.control_flow.stops.push(Vec::new());
+
         self.expression(scanner);
 
-        let exit_jump = self.emit_jump(OpCode::JumpIfFalse as u8);
+        let exit_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         self.emit_byte(OpCode::Pop as u8);
         self.statement(scanner);
         self.emit_loop(loop_start);
 
-        self.patch_jump(exit_jump as u16);
+        self.patch_jump(exit_jump as usize);
         self.emit_byte(OpCode::Pop as u8);
 
         self.control_flow.loop_starts.pop();
         for i in self.control_flow.stops.pop().unwrap() {
-            self.patch_jump(i as u16);
+            self.patch_jump(i as usize);
         }
     }
 
@@ -310,13 +316,15 @@ impl Parser {
         let loop_start = self.compiling_chunk.code.len();
         self.control_flow.loop_starts.push(loop_start);
         self.control_flow.stops.push(Vec::new());
+        self.control_flow.locals_in.push(self.compiler.local_count);
 
         self.statement(scanner);
         self.emit_loop(loop_start);
 
         self.control_flow.loop_starts.pop();
+        self.control_flow.locals_in.pop();
         for i in self.control_flow.stops.pop().unwrap() {
-            self.patch_jump(i as u16);
+            self.patch_jump(i as usize);
         }
     }
 
@@ -331,7 +339,12 @@ impl Parser {
             scanner,
         );
 
-        let exit_jump = self.emit_jump(Jump as u8);
+        let exit_jump = self.emit_jump(Jump as usize);
+        let count = *self.control_flow.locals_in.last().unwrap();
+
+        for _ in count..self.compiler.local_count {
+            self.emit_byte(OpCode::Pop as u8);
+        }
 
         if let Some(jumps) = self.control_flow.stops.last_mut() {
             jumps.push(exit_jump as u8);
@@ -349,7 +362,132 @@ impl Parser {
             scanner,
         );
 
-        let loop_start = self.control_flow.loop_starts.pop().unwrap();
+        let loop_start = *self.control_flow.loop_starts.last().unwrap();
+        let count = *self.control_flow.locals_in.last().unwrap();
+
+        for _ in count..self.compiler.local_count {
+            self.emit_byte(OpCode::Pop as u8);
+        }
+
         self.emit_loop(loop_start);
+    }
+
+    pub fn match_stmt(&mut self, scanner: &mut Scanner) {
+        let mut jumps: Vec<usize> = Vec::new();
+        let mut type_tags: Vec<TypeTag> = Vec::new();
+
+        self.expression(scanner);
+        let ftype_tag = self.type_tag.pop().unwrap_or(Id(Void));
+
+        self.begin_scope();
+
+        self.consume(
+            TokenType::LeftBrace,
+            "Expect '{' after match body.",
+            scanner,
+        );
+
+        self.emit_byte(OpCode::Dup as u8);
+        self.expression(scanner);
+        type_tags.push(self.type_tag.pop().unwrap_or(Id(Void)));
+        self.emit_byte(OpCode::EqualTo as u8);
+
+        let next_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
+
+        self.consume(TokenType::FatArrowLeft, "Expect '=>' after case.", scanner);
+
+        self.begin_scope();
+        self.consume(
+            TokenType::LeftBrace,
+            "Expect '{' at the start of the case",
+            scanner,
+        );
+
+        self.emit_byte(OpCode::Pop as u8);
+        self.emit_byte(OpCode::Pop as u8);
+        self.block(scanner);
+        jumps.push(self.emit_jump(OpCode::Jump as usize));
+
+        self.patch_jump(next_jump as usize);
+        self.emit_byte(OpCode::Pop as u8);
+
+        self.end_scope();
+        self.consume(
+            TokenType::Comma,
+            "Expect ',' at the end of the case's block.",
+            scanner,
+        );
+
+        while self.current.token_type != TokenType::WildCard {
+            self.emit_byte(OpCode::Dup as u8);
+            self.expression(scanner);
+            type_tags.push(self.type_tag.pop().unwrap_or(Id(Void)));
+            self.emit_byte(OpCode::EqualTo as u8);
+
+            let next_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
+
+            self.consume(TokenType::FatArrowLeft, "Expect '=>' after case.", scanner);
+
+            self.begin_scope();
+            self.consume(
+                TokenType::LeftBrace,
+                "Expect '{' at the start of the case",
+                scanner,
+            );
+
+            self.emit_byte(OpCode::Pop as u8);
+            self.emit_byte(OpCode::Pop as u8);
+            self.block(scanner);
+            jumps.push(self.emit_jump(OpCode::Jump as usize));
+            self.patch_jump(next_jump as usize);
+            self.emit_byte(OpCode::Pop as u8);
+
+            self.end_scope();
+            self.consume(
+                TokenType::Comma,
+                "Expect ',' at the end of the case's block.",
+                scanner,
+            );
+        }
+
+        self.consume(
+            TokenType::WildCard,
+            "Expect '_' at the end of the of the match cases.",
+            scanner,
+        );
+
+        self.consume(TokenType::FatArrowLeft, "Expect '=>' after a case", scanner);
+        self.begin_scope();
+        self.consume(
+            TokenType::LeftBrace,
+            "Expect '{' after a fat arrow",
+            scanner,
+        );
+
+        self.emit_byte(OpCode::Pop as u8);
+        self.block(scanner);
+        jumps.push(self.emit_jump(OpCode::Jump as usize));
+
+        self.end_scope();
+
+        self.consume(
+            TokenType::RightBrace,
+            "Excpet '}' at the end of the match body.",
+            scanner,
+        );
+        self.end_scope();
+
+        for i in type_tags {
+            if ftype_tag != i {
+                self.error(&format!(
+                    "Missmatched type expected [{}] due the value matched on was [{}] found [{}]",
+                    ftype_tag, ftype_tag, i
+                ));
+            }
+        }
+
+        for i in jumps {
+            self.patch_jump(i);
+        }
     }
 }

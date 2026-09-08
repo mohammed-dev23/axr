@@ -293,6 +293,10 @@ impl Vm {
                         self.stack.push(array[index.as_unt() as usize].clone());
                     }
                 }
+                x if x == OpCode::Dup as u8 => {
+                    let value = self.stack.last().cloned().unwrap_or(Void);
+                    self.stack.push(value);
+                }
                 _ => {}
             }
         }

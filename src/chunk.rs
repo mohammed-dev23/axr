@@ -55,6 +55,7 @@ pub enum OpCode {
     JumpIfFalse,
     Jump,
     Loop,
+    Dup,
 
     //Collocations
     Array,

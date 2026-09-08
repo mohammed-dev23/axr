@@ -34,6 +34,7 @@ pub enum TokenType {
     Colon,        // :
     LeftBracket,  // [
     RightBracket, // ]
+    WildCard,     // _
 
     //One or two character tokens.
     Bang,         // !
@@ -69,6 +70,7 @@ pub enum TokenType {
     Loop,
     Stop,
     Skip,
+    Match,
 
     //Values of the boolean type
     True,
@@ -125,6 +127,7 @@ impl<'s> Scanner<'s> {
             '+' => self.make_token(TokenType::Plus),
             '/' => self.make_token(TokenType::Slash),
             '*' => self.make_token(TokenType::Star),
+            '_' => self.make_token(TokenType::WildCard),
             '!' => {
                 if self.match_tokens('=') {
                     self.make_token(TokenType::BangEqual)
@@ -336,6 +339,7 @@ impl<'s> Scanner<'s> {
             "stop" => TokenType::Stop,
             "skip" => TokenType::Skip,
             "Array" => TokenType::Array,
+            "match" => TokenType::Match,
             _ => TokenType::Identifier,
         }
     }

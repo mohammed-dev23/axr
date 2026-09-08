@@ -47,17 +47,17 @@ impl Parser {
         self.make_constant(Value::Str(Arc::from(name.start.to_string())))
     }
 
-    pub fn emit_jump(&mut self, instruction: u8) -> u8 {
-        self.emit_byte(instruction);
+    pub fn emit_jump(&mut self, instruction: usize) -> usize {
+        self.emit_byte(instruction as u8);
         self.emit_byte(0xff);
         self.emit_byte(0xff);
-        return (&self.current_chunk().code.len() - 2) as u8;
+        return &self.current_chunk().code.len() - 2;
     }
 
-    pub fn patch_jump(&mut self, offset: u16) {
-        let jump = (self.current_chunk().code.len()) as u16 - offset - 2;
+    pub fn patch_jump(&mut self, offset: usize) {
+        let jump = (self.current_chunk().code.len()) - offset - 2;
 
-        if jump as u16 > u16::MAX {
+        if jump > usize::MAX {
             self.error("Too much code to jump over.");
         }
 
