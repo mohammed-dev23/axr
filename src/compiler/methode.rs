@@ -1,3 +1,8 @@
+use crate::{
+    compiler::core::{TypeId::Void, TypeTag::Array},
+    value::Value::Int,
+};
+
 use super::*;
 
 impl Parser {
@@ -20,6 +25,9 @@ impl Parser {
             "celi" => self.celi_methode(),
             "floor" => self.floor_methode(),
             "abs" => self.abs_methode(),
+            "push" => self.push_methode(scanner),
+            "pop" => self.pop_methode(),
+            "len" => self.len_methode(),
             _ => {
                 self.error(&format!("The methode [{}] doesn't exsist.", &methode_name));
             }
@@ -169,5 +177,71 @@ impl Parser {
         }
 
         self.emit_byte(OpCode::Abs as u8);
+    }
+
+    pub fn push_methode(&mut self, scanner: &mut Scanner) {
+        if !self.info.is_mut.pop().unwrap_or(false) {
+            self.error("Value must be mutated in order to use push() on it!");
+        }
+
+        let array_type = self.type_tag.pop().unwrap_or(TypeTag::Array(Void));
+        self.expression(scanner);
+        let values_typetag = self.type_tag.pop().unwrap_or(TypeTag::Id(Void));
+
+        match (array_type, values_typetag) {
+            (TypeTag::Array(TypeId::Int), TypeTag::Id(TypeId::Int))
+            | (TypeTag::Array(TypeId::Unt), TypeTag::Id(TypeId::Unt))
+            | (TypeTag::Array(TypeId::Float), TypeTag::Id(TypeId::Float))
+            | (TypeTag::Array(TypeId::Str), TypeTag::Id(TypeId::Str))
+            | (TypeTag::Array(TypeId::Char), TypeTag::Id(TypeId::Char))
+            | (TypeTag::Array(TypeId::Bool), TypeTag::Id(TypeId::Bool))
+            | (TypeTag::Array(TypeId::Void), TypeTag::Id(TypeId::Void)) => {}
+            _ => {
+                self.error(&format!(
+                    "Mismatched types array for type [{}] found [{}]",
+                    array_type, values_typetag
+                ));
+            }
+        }
+
+        self.emit_byte(OpCode::Push as u8);
+
+        if let Some(x) = self.info.last_local_slot {
+            self.emit_bytes(OpCode::SetLocal as u8, x);
+        } else {
+            self.error("push() can only be used directly on an array.");
+        }
+    }
+
+    pub fn pop_methode(&mut self) {
+        if !self.info.is_mut.pop().unwrap_or(false) {
+            self.error("Value must be mutated in order to use push() on it!");
+        }
+
+        let type_tag = self.type_tag.pop().unwrap_or(Array(Void)).as_typeid();
+        self.type_tag.push(Id(type_tag));
+
+        self.emit_byte(OpCode::PopArray as u8);
+
+        if let Some(x) = self.info.last_local_slot {
+            self.emit_bytes(OpCode::SetLocal as u8, x);
+        } else {
+            self.error("pop() can only be used directly on an array.");
+        }
+    }
+
+    pub fn len_methode(&mut self) {
+        let type_tag = self.type_tag.pop().unwrap();
+
+        match type_tag {
+            Array(_) => {}
+            Id(TypeId::Str) => {}
+            _ => {
+                self.error(&format!("Can not use len() on [{}]", type_tag));
+            }
+        }
+
+        self.emit_byte(OpCode::Len as u8);
+        self.type_tag.push(Id(TypeId::Unt));
     }
 }

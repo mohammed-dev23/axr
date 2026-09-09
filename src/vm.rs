@@ -9,7 +9,10 @@ use crate::{
         OpCode::{self},
     },
     compiler::{self, core::TypeTag::Id},
-    value::Value::{self, Array, Char, Int, Str, Unt, Void},
+    value::{
+        self,
+        Value::{self, Array, Char, Int, Str, Unt, Void},
+    },
     vm::InterpretResult::CompileError,
 };
 
@@ -149,7 +152,7 @@ impl Vm {
                     }
 
                     if value.is_array() {
-                        let mut array = value.as_array();
+                        let mut array = value.as_array().unwrap();
                         array.reverse();
                         self.stack.push(Value::Array(array));
                     }
@@ -287,15 +290,72 @@ impl Vm {
                 x if x == OpCode::IndexArray as u8 => {
                     let index = self.stack.pop().unwrap_or(Void);
                     let array = self.stack.pop().unwrap_or(Void);
+                    let value = array.clone();
 
                     if array.is_array() {
-                        let array = array.as_array();
+                        let array = array.as_array().unwrap_or_else(|| {
+                            self.runtime_err(&format!("Expected [Array] found [{}]", value));
+                            Vec::new()
+                        });
                         self.stack.push(array[index.as_unt() as usize].clone());
                     }
                 }
                 x if x == OpCode::Dup as u8 => {
                     let value = self.stack.last().cloned().unwrap_or(Void);
                     self.stack.push(value);
+                }
+                x if x == OpCode::NewArray as u8 => {
+                    self.stack.push(Array(Vec::new()));
+                }
+                x if x == OpCode::Push as u8 => {
+                    let value = self.stack.pop().unwrap_or(Void);
+                    let array = self.stack.pop().unwrap_or(Void);
+                    let none = array.clone();
+
+                    let mut array = array.as_array().unwrap_or_else(|| {
+                        self.runtime_err(&format!("Expected [Array] found [{}]", none));
+                        Vec::new()
+                    });
+
+                    array.push(value);
+
+                    self.stack.push(Array(array));
+                }
+                x if x == OpCode::PopArray as u8 => {
+                    let array = self.stack.pop().unwrap_or(Void);
+                    let none = array.clone();
+
+                    let mut array = array.as_array().unwrap_or_else(|| {
+                        self.runtime_err(&format!("Expected [Array] found [{}]", none));
+                        Vec::new()
+                    });
+
+                    let value = array.pop().unwrap_or(Void);
+
+                    self.stack.push(value);
+                    self.stack.push(Array(array));
+                }
+                x if x == OpCode::Len as u8 => {
+                    let value = self.stack.pop().unwrap_or(Void);
+
+                    if value.is_str() {
+                        let value = value.as_str();
+                        let len_value = value.len() as u64;
+
+                        self.stack.push(Value::Unt(len_value));
+                    }
+
+                    if value.is_array() {
+                        let none = value.clone();
+
+                        let value = value.as_array().unwrap_or_else(|| {
+                            self.runtime_err(&format!("Expected [Array] found [{}]", none));
+                            Vec::new()
+                        });
+
+                        let len_value = value.len() as u64;
+                        self.stack.push(Value::Unt(len_value));
+                    }
                 }
                 _ => {}
             }

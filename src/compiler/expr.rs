@@ -220,43 +220,55 @@ impl Parser {
         let mut type_tag: Vec<TypeTag> = Vec::new();
         let mut typetag: TypeTag = TypeTag::Array(TypeId::Void);
 
-        self.expression(scanner);
-        array_len += 1;
-        type_tag.push(self.type_tag.pop().unwrap_or(Id(TypeId::Void)));
+        if self.check(&TokenType::RightBracket) {
+            self.advance(scanner);
 
-        while self.current.token_type == TokenType::Comma {
-            self.match_consume(&TokenType::Comma, scanner);
+            let expected_type = self.expected_type.take().unwrap_or_else(|| {
+                self.error("when declaring new array a type annotation is needed.");
+                TypeTag::Array(Void)
+            });
+
+            self.emit_byte(OpCode::NewArray as u8);
+            self.type_tag.push(expected_type);
+        } else {
             self.expression(scanner);
             array_len += 1;
             type_tag.push(self.type_tag.pop().unwrap_or(Id(TypeId::Void)));
-        }
 
-        if let Some(first) = type_tag.first() {
-            typetag = *first;
-
-            if !type_tag.iter().all(|t| t == first) {
-                self.error("Arrays must contain the same type for all of its slots.");
+            while self.current.token_type == TokenType::Comma {
+                self.match_consume(&TokenType::Comma, scanner);
+                self.expression(scanner);
+                array_len += 1;
+                type_tag.push(self.type_tag.pop().unwrap_or(Id(TypeId::Void)));
             }
 
-            if let Some(x) = self.expected_type {
-                if x != TypeTag::Array(first.as_typeid()) {
-                    self.error(&format!(
-                        "Mismatched types, expected {} found Array[{}]",
-                        x, first
-                    ));
+            if let Some(first) = type_tag.first() {
+                typetag = *first;
+
+                if !type_tag.iter().all(|t| t == first) {
+                    self.error("Arrays must contain the same type for all of its slots.");
+                }
+
+                if let Some(x) = self.expected_type {
+                    if x != TypeTag::Array(first.as_typeid()) {
+                        self.error(&format!(
+                            "Mismatched types, expected {} found Array[{}]",
+                            x, first
+                        ));
+                    }
                 }
             }
+
+            self.consume(
+                TokenType::RightBracket,
+                "Expected ']' at the end of array",
+                scanner,
+            );
+
+            self.emit_byte(OpCode::Array as u8);
+            self.emit_byte(array_len as u8);
+            self.type_tag.push(TypeTag::Array(typetag.as_typeid()));
         }
-
-        self.consume(
-            TokenType::RightBracket,
-            "Expected ']' at the end of array",
-            scanner,
-        );
-
-        self.emit_byte(OpCode::Array as u8);
-        self.emit_byte(array_len as u8);
-        self.type_tag.push(TypeTag::Array(typetag.as_typeid()));
     }
 
     pub fn index_array(&mut self, scanner: &mut Scanner) {

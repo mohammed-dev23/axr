@@ -89,10 +89,10 @@ impl Value {
         }
     }
 
-    pub fn as_array(&self) -> Vec<Value> {
+    pub fn as_array(self) -> Option<Vec<Value>> {
         match self {
-            Array(x) => x.clone(),
-            _ => Vec::new(),
+            Array(x) => Some(x),
+            _ => None,
         }
     }
 }

@@ -1,29 +1,21 @@
 fn main() {
-    loop {
-        let n1 : int = input("guss a num: ");
-        println(n1);
+    let ~x : Array[int] = [];
 
-        match n1 {
-            1 => {
-                println("not there yet!.");
-                skip;
-            },
-            2 => {
-                println("you are getting closer son!.");
-                skip;
-            },
-            3 => {
-                println("you got itt!");
-                skip;
-            },
-            4 => {
-                println("you are drefting away :<");
-                skip;
-            },
-            _ => {
-                println("not even close cu ;<");
-                stop;
-            }
-        }
-    }
+    x.push(1);
+
+    println(x[0 to unt]);
+
+    let z = x.pop();
+    println(z);
+
+    x.push(1);
+    x.push(2);
+    x.push(3);
+    x.push(4);
+    x.push(5);
+
+    x.pop();
+
+    println(x.len());
+    println(x);
 }

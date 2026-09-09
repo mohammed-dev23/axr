@@ -60,6 +60,12 @@ pub enum OpCode {
     //Collocations
     Array,
     IndexArray,
+    NewArray,
+    Push,
+    PopArray,
+
+    //Measurement Functions
+    Len,
 
     //Other
     Cast,
