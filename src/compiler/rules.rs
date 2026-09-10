@@ -4,7 +4,7 @@ use super::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Precedence {
     None,
-    Assignment, // =
+    Assignment, // = += -=
     Or,         // or
     And,        // and
     Equality,   // == !=
@@ -14,7 +14,7 @@ pub enum Precedence {
     To,         // casting
     Unary,      // - !
     Call,       // . ()
-    PRIMARY,
+    Primary,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -30,7 +30,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 57] = [
+static RULES: [ParseRule; 61] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: None,
@@ -117,6 +117,16 @@ static RULES: [ParseRule; 57] = [
     }, // <=
     NONE_RULE, // =>
     ParseRule {
+        prefix: None,
+        infix: Some(Parser::add_add_expr),
+        precedence: Precedence::Assignment,
+    }, // +=
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::minus_minus_expr),
+        precedence: Precedence::Assignment,
+    }, // -=
+    ParseRule {
         prefix: Some(Parser::variable),
         infix: None,
         precedence: Precedence::None,
@@ -169,6 +179,8 @@ static RULES: [ParseRule; 57] = [
     NONE_RULE, // Stop
     NONE_RULE, // Skip
     NONE_RULE, // Match
+    NONE_RULE, // For
+    NONE_RULE, // In
     ParseRule {
         prefix: Some(Parser::literal),
         infix: None,

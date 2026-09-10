@@ -8,12 +8,15 @@ use crate::{
         Chunk,
         OpCode::{self},
     },
-    compiler::{self, core::TypeTag::Id},
-    value::{
+    compiler::{
         self,
-        Value::{self, Array, Char, Int, Str, Unt, Void},
+        core::{
+            TypeId,
+            TypeTag::{self, Id},
+        },
     },
-    vm::InterpretResult::CompileError,
+    value::Value::{self, Array, Char, Int, Str, Unt, Void},
+    vm::InterpretResult::RuntimeError,
 };
 
 pub struct Vm {
@@ -30,6 +33,8 @@ pub enum InterpretResult {
     CompileError,
     RuntimeError,
 }
+
+pub type Result<T> = std::result::Result<T, InterpretResult>;
 
 impl Vm {
     pub fn new() -> Self {
@@ -77,36 +82,58 @@ impl Vm {
 
             let instruction: u8 = self.read_byte();
 
-            match instruction {
+            let res: InterpretResult = match instruction {
                 x if x == OpCode::Return as u8 => {
                     return InterpretResult::Ok;
                 }
                 x if x == OpCode::Constant as u8 => {
                     let constant = self.read_constant();
                     self.stack.push(constant);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Negate as u8 => {
                     let value = self.stack.pop().unwrap_or(Value::Void);
                     self.stack.push(-value);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Add as u8 => self.binary_operations('+'),
                 x if x == OpCode::Subtract as u8 => self.binary_operations('-'),
                 x if x == OpCode::Multiply as u8 => self.binary_operations('*'),
                 x if x == OpCode::Divide as u8 => self.binary_operations('/'),
-                x if x == OpCode::GreaterThan as u8 => self.comparison_operations(">"),
-                x if x == OpCode::LessThan as u8 => self.comparison_operations("<"),
-                x if x == OpCode::GreaterThanEq as u8 => self.comparison_operations(">="),
-                x if x == OpCode::LessThanEq as u8 => self.comparison_operations("<="),
-                x if x == OpCode::EqualTo as u8 => self.comparison_operations("=="),
-                x if x == OpCode::NotEqualTo as u8 => self.comparison_operations("!="),
+                x if x == OpCode::GreaterThan as u8 => {
+                    self.comparison_operations(">");
+                    InterpretResult::Ok
+                }
+                x if x == OpCode::LessThan as u8 => {
+                    self.comparison_operations("<");
+                    InterpretResult::Ok
+                }
+                x if x == OpCode::GreaterThanEq as u8 => {
+                    self.comparison_operations(">=");
+                    InterpretResult::Ok
+                }
+                x if x == OpCode::LessThanEq as u8 => {
+                    self.comparison_operations("<=");
+                    InterpretResult::Ok
+                }
+                x if x == OpCode::EqualTo as u8 => {
+                    self.comparison_operations("==");
+                    InterpretResult::Ok
+                }
+                x if x == OpCode::NotEqualTo as u8 => {
+                    self.comparison_operations("!=");
+                    InterpretResult::Ok
+                }
                 x if x == OpCode::Modulo as u8 => self.binary_operations('%'),
                 x if x == OpCode::Print as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
-                    print!("{}", value)
+                    print!("{}", value);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Println as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     println!("{}", value);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Abs as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
@@ -116,31 +143,39 @@ impl Vm {
                         Int(x) => self.stack.push(Value::Int(x.abs())),
                         _ => {}
                     };
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Floor as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     self.stack.push(Value::Float(value.as_float().floor()));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Ceil as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     self.stack.push(Value::Float(value.as_float().ceil()));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Round as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     self.stack.push(Value::Float(value.as_float().round()));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::SquareRoot as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     self.stack.push(Value::Float(value.as_float().sqrt()));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::IsEmpty as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     self.stack.push(Value::Bool(value.as_str().is_empty()));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Trim as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
                     self.stack
                         .push(Value::Str(Arc::from(value.as_str().trim())));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Reverse as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
@@ -156,15 +191,20 @@ impl Vm {
                         array.reverse();
                         self.stack.push(Value::Array(array));
                     }
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::True as u8 => {
                     self.stack.push(Value::Bool(true));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::False as u8 => {
                     self.stack.push(Value::Bool(false));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Void as u8 => {
                     self.stack.push(Value::Void);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Not as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
@@ -175,6 +215,8 @@ impl Vm {
                         self.runtime_err(&format!("cannot use {} with Not/! opratoier.", value));
                         self.stack.push(value);
                     }
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Pop as u8 => {
                     self.stack.pop().unwrap_or(Void);
@@ -185,10 +227,12 @@ impl Vm {
                     let slot = self.read_byte();
                     let value = self.stack[slot as usize].clone();
                     self.stack.push(value);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::SetLocal as u8 => {
                     let slot = self.read_byte();
                     self.stack[slot as usize] = self.peek();
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Input as u8 => {
                     let expected_type = self.read_byte();
@@ -205,7 +249,7 @@ impl Vm {
                         t if t == Id(compiler::core::TypeId::Int).as_bytes() => {
                             Int(input.parse::<i64>().unwrap_or_else(|_| {
                                 self.runtime_err(&format!("Expected int found {}", input));
-                                return 0;
+                                0
                             }))
                         }
                         t if t == Id(compiler::core::TypeId::Str).as_bytes() => {
@@ -242,6 +286,7 @@ impl Vm {
                     };
 
                     self.stack.push(value);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Cast as u8 => {
                     let target = self.read_byte();
@@ -257,8 +302,9 @@ impl Vm {
                         t if t == Id(compiler::core::TypeId::Unt).as_bytes() => {
                             self.stack.push(Value::Unt(value.cast_unt().unwrap()));
                         }
-                        _ => return CompileError,
+                        _ => return InterpretResult::RuntimeError,
                     }
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::JumpIfFalse as u8 => {
                     let offset = self.read_short();
@@ -266,14 +312,18 @@ impl Vm {
                     if !self.peek().as_bool() {
                         self.ip += offset as usize
                     }
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Jump as u8 => {
                     let offset = self.read_short();
                     self.ip += offset as usize;
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Loop as u8 => {
                     let offset = self.read_short();
-                    self.ip -= offset as usize
+                    self.ip -= offset as usize;
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Array as u8 => {
                     let mut array: Vec<Value> = Vec::new();
@@ -286,6 +336,7 @@ impl Vm {
 
                     array.reverse();
                     self.stack.push(Array(array));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::IndexArray as u8 => {
                     let index = self.stack.pop().unwrap_or(Void);
@@ -297,15 +348,24 @@ impl Vm {
                             self.runtime_err(&format!("Expected [Array] found [{}]", value));
                             Vec::new()
                         });
+
+                        if array.len() < index.as_unt() as usize {
+                            return self.runtime_err("index out of bond");
+                        }
+
                         self.stack.push(array[index.as_unt() as usize].clone());
                     }
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Dup as u8 => {
                     let value = self.stack.last().cloned().unwrap_or(Void);
                     self.stack.push(value);
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::NewArray as u8 => {
                     self.stack.push(Array(Vec::new()));
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Push as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
@@ -320,6 +380,8 @@ impl Vm {
                     array.push(value);
 
                     self.stack.push(Array(array));
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::PopArray as u8 => {
                     let array = self.stack.pop().unwrap_or(Void);
@@ -334,6 +396,8 @@ impl Vm {
 
                     self.stack.push(value);
                     self.stack.push(Array(array));
+
+                    InterpretResult::Ok
                 }
                 x if x == OpCode::Len as u8 => {
                     let value = self.stack.pop().unwrap_or(Void);
@@ -356,8 +420,76 @@ impl Vm {
                         let len_value = value.len() as u64;
                         self.stack.push(Value::Unt(len_value));
                     }
+
+                    InterpretResult::Ok
                 }
-                _ => {}
+                x if x == OpCode::AddAdd as u8 => {
+                    let lhs_value = self.stack.pop().unwrap_or(Void);
+                    let rhs_value = self.stack.pop().unwrap_or(Void);
+                    let lhs_type_tag = self.read_byte();
+
+                    match lhs_type_tag {
+                        t if t == TypeTag::Id(TypeId::Int).as_bytes() => {
+                            let lhs = lhs_value.as_int();
+                            let mut rhs = rhs_value.as_int();
+                            rhs += lhs;
+
+                            self.stack.push(Value::Int(rhs));
+                        }
+                        t if t == TypeTag::Id(TypeId::Unt).as_bytes() => {
+                            let lhs = lhs_value.as_unt();
+                            let mut rhs = rhs_value.as_unt();
+                            rhs += lhs;
+
+                            self.stack.push(Value::Unt(rhs));
+                        }
+                        t if t == TypeTag::Id(TypeId::Float).as_bytes() => {
+                            let lhs = lhs_value.as_float();
+                            let mut rhs = rhs_value.as_float();
+                            rhs += lhs;
+
+                            self.stack.push(Value::Float(rhs));
+                        }
+                        _ => return RuntimeError,
+                    }
+                    InterpretResult::Ok
+                }
+                x if x == OpCode::MinusMinus as u8 => {
+                    let lhs_value = self.stack.pop().unwrap_or(Void);
+                    let rhs_value = self.stack.pop().unwrap_or(Void);
+                    let lhs_type_tag = self.read_byte();
+
+                    match lhs_type_tag {
+                        t if t == TypeTag::Id(TypeId::Int).as_bytes() => {
+                            let lhs = lhs_value.as_int();
+                            let mut rhs = rhs_value.as_int();
+                            rhs -= lhs;
+
+                            self.stack.push(Value::Int(rhs));
+                        }
+                        t if t == TypeTag::Id(TypeId::Unt).as_bytes() => {
+                            let lhs = lhs_value.as_unt();
+                            let mut rhs = rhs_value.as_unt();
+                            rhs -= lhs;
+
+                            self.stack.push(Value::Unt(rhs));
+                        }
+                        t if t == TypeTag::Id(TypeId::Float).as_bytes() => {
+                            let lhs = lhs_value.as_float();
+                            let mut rhs = rhs_value.as_float();
+                            rhs -= lhs;
+
+                            self.stack.push(Value::Float(rhs));
+                        }
+                        _ => return RuntimeError,
+                    }
+                    InterpretResult::Ok
+                }
+                _ => RuntimeError,
+            };
+
+            if res == InterpretResult::RuntimeError {
+                break InterpretResult::RuntimeError;
             }
         }
     }
@@ -383,44 +515,92 @@ impl Vm {
         self.chunk.constants.values[index].clone()
     }
 
-    fn binary_operations(&mut self, op: char) {
+    fn binary_operations(&mut self, op: char) -> InterpretResult {
         let v2 = self.stack.pop().unwrap_or(Void);
         let v1 = self.stack.pop().unwrap_or(Void);
 
         match (&v1, &v2) {
             (Value::Float(v1), Value::Float(v2)) => {
-                self.stack
-                    .push(Value::Float(Self::op(op, v1, *v2).unwrap_or(0.0)));
+                let res = Self::op(op, v1, *v2);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Float(res));
+
+                    InterpretResult::Ok
+                } else {
+                    return InterpretResult::RuntimeError;
+                }
             }
             (Value::Int(v1), Value::Int(v2)) => {
-                self.stack
-                    .push(Value::Int(Self::op(op, v1, *v2).unwrap_or(0)));
+                let res = Self::op(op, v1, *v2);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Int(res));
+
+                    return InterpretResult::Ok;
+                } else {
+                    return RuntimeError;
+                }
             }
             (Value::Float(v1), Value::Int(v2)) => {
-                self.stack
-                    .push(Value::Float(Self::op(op, v1, *v2 as f64).unwrap_or(0.0)));
+                let res = Self::op(op, v1, *v2 as f64);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Float(res));
+
+                    return InterpretResult::Ok;
+                } else {
+                    return RuntimeError;
+                }
             }
             (Value::Int(v1), Value::Float(v2)) => {
-                self.stack
-                    .push(Value::Float(Self::op(op, *v1 as f64, *v2).unwrap_or(0.0)));
+                let res = Self::op(op, *v1 as f64, *v2);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Float(res));
+
+                    return InterpretResult::Ok;
+                } else {
+                    RuntimeError
+                }
             }
             (Value::Str(v1), Value::Str(v2)) => {
                 self.stack.push(Value::Str(Arc::from(v1.to_string() + v2)));
+                InterpretResult::Ok
             }
             (Value::Unt(v1), Value::Unt(v2)) => {
-                self.stack
-                    .push(Value::Unt(Self::op(op, v1, *v2).unwrap_or(0)));
+                let res = Self::op(op, v1, *v2);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Unt(res));
+                    return InterpretResult::Ok;
+                } else {
+                    return RuntimeError;
+                }
             }
             (Value::Unt(v1), Value::Float(v2)) => {
-                self.stack
-                    .push(Value::Float(Self::op(op, *v1 as f64, *v2).unwrap_or(0.0)));
+                let res = Self::op(op, *v1 as f64, *v2);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Float(res));
+
+                    return InterpretResult::Ok;
+                } else {
+                    RuntimeError
+                }
             }
             (Value::Float(v1), Value::Unt(v2)) => {
-                self.stack
-                    .push(Value::Float(Self::op(op, *v1, *v2 as f64).unwrap_or(0.0)));
+                let res = Self::op(op, *v1, *v2 as f64);
+
+                if let Ok(res) = res {
+                    self.stack.push(Value::Float(res));
+                    return InterpretResult::Ok;
+                } else {
+                    InterpretResult::RuntimeError
+                }
             }
             _ => {
-                return;
+                return RuntimeError;
             }
         }
     }
@@ -449,7 +629,7 @@ impl Vm {
         }
     }
 
-    pub fn op<T, R, A>(op: char, v1: T, v2: R) -> Option<A>
+    pub fn op<T, R, A>(op: char, v1: T, v2: R) -> Result<A>
     where
         T: std::ops::Add<R, Output = A>
             + std::ops::Sub<R, Output = A>
@@ -459,19 +639,22 @@ impl Vm {
         R: std::cmp::PartialEq + Default,
     {
         match op {
-            '+' => Some(v1 + v2),
-            '-' => Some(v1 - v2),
-            '*' => Some(v1 * v2),
+            '+' => Ok(v1 + v2),
+            '-' => Ok(v1 - v2),
+            '*' => Ok(v1 * v2),
             '/' => {
                 if v2 == R::default() {
                     eprintln!("Can not divide by zero!");
-                    return None;
+                    return Err(InterpretResult::RuntimeError);
                 } else {
-                    Some(v1 / v2)
+                    Ok(v1 / v2)
                 }
             }
-            '%' => Some(v1 % v2),
-            _ => None,
+            '%' => Ok(v1 % v2),
+            _ => {
+                eprintln!("undifined op [{}]", op);
+                Err(InterpretResult::RuntimeError)
+            }
         }
     }
 

@@ -229,6 +229,7 @@ impl Parser {
             });
 
             self.emit_byte(OpCode::NewArray as u8);
+            self.collocations.array_len.push(-1);
             self.type_tag.push(expected_type);
         } else {
             self.expression(scanner);
@@ -267,6 +268,7 @@ impl Parser {
 
             self.emit_byte(OpCode::Array as u8);
             self.emit_byte(array_len as u8);
+            self.collocations.array_len.push(array_len as isize);
             self.type_tag.push(TypeTag::Array(typetag.as_typeid()));
         }
     }
@@ -280,6 +282,18 @@ impl Parser {
                 "Expected unt type in indexing found [{}]",
                 type_tag
             ));
+        }
+
+        let array_len = match self.collocations.array_len.last() {
+            Some(x) => x,
+            None => {
+                self.error("Array len was not found, panic!.");
+                &-1
+            }
+        };
+
+        if array_len < &0 {
+            self.error("index out of bond.");
         }
 
         self.consume(
@@ -490,5 +504,97 @@ impl Parser {
 
         self.type_tag.push(Id(TypeId::Bool));
         self.patch_jump(end_jump as usize);
+    }
+
+    pub fn add_add_expr(&mut self, scanner: &mut Scanner) {
+        if !self.info.is_mut.pop().unwrap_or(false) {
+            self.error("Value must be mutated in order to use += on it!");
+        }
+
+        let type_tag_lhs = self.type_tag.pop().unwrap_or(Id(Void));
+        self.expression(scanner);
+        let type_tag_rhs = self.type_tag.pop().unwrap_or(Id(Void));
+
+        match (type_tag_rhs, type_tag_lhs) {
+            (TypeTag::Id(TypeId::Int), TypeTag::Id(TypeId::Int)) => {
+                self.type_tag.push(Id(TypeId::Int));
+            }
+            (TypeTag::Id(TypeId::Unt), TypeTag::Id(TypeId::Unt)) => {
+                self.type_tag.push(Id(TypeId::Unt));
+            }
+            (TypeTag::Id(TypeId::Float), TypeTag::Id(TypeId::Float)) => {
+                self.type_tag.push(Id(TypeId::Float));
+            }
+            (TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float), _) => {
+                self.error(&format!(
+                    "Missmatched types expected [{}] found [{}]",
+                    type_tag_rhs, type_tag_lhs
+                ));
+            }
+            (_, TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float)) => {
+                self.error(&format!(
+                    "Missmatched types expected [{}] found [{}]",
+                    type_tag_rhs, type_tag_lhs
+                ));
+            }
+            _ => {
+                self.error("modifers like += and -= can be used only on numbers");
+            }
+        }
+
+        self.emit_byte(OpCode::AddAdd as u8);
+        self.emit_byte(type_tag_lhs.as_bytes());
+
+        if let Some(x) = self.info.last_local_slot {
+            self.emit_bytes(OpCode::SetLocal as u8, x);
+        } else {
+            self.error("'+=' can only be used directly on an var.");
+        }
+    }
+
+    pub fn minus_minus_expr(&mut self, scanner: &mut Scanner) {
+        if !self.info.is_mut.pop().unwrap_or(false) {
+            self.error("Value must be mutated in order to use -= on it!");
+        }
+
+        let type_tag_lhs = self.type_tag.pop().unwrap_or(Id(Void));
+        self.expression(scanner);
+        let type_tag_rhs = self.type_tag.pop().unwrap_or(Id(Void));
+
+        match (type_tag_rhs, type_tag_lhs) {
+            (TypeTag::Id(TypeId::Int), TypeTag::Id(TypeId::Int)) => {
+                self.type_tag.push(Id(TypeId::Int));
+            }
+            (TypeTag::Id(TypeId::Unt), TypeTag::Id(TypeId::Unt)) => {
+                self.type_tag.push(Id(TypeId::Unt));
+            }
+            (TypeTag::Id(TypeId::Float), TypeTag::Id(TypeId::Float)) => {
+                self.type_tag.push(Id(TypeId::Float));
+            }
+            (TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float), _) => {
+                self.error(&format!(
+                    "Missmatched types expected [{}] found [{}]",
+                    type_tag_rhs, type_tag_lhs
+                ));
+            }
+            (_, TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float)) => {
+                self.error(&format!(
+                    "Missmatched types expected [{}] found [{}]",
+                    type_tag_rhs, type_tag_lhs
+                ));
+            }
+            _ => {
+                self.error("modifers like += and -= can be used only on numbers");
+            }
+        }
+
+        self.emit_byte(OpCode::MinusMinus as u8);
+        self.emit_byte(type_tag_lhs.as_bytes());
+
+        if let Some(x) = self.info.last_local_slot {
+            self.emit_bytes(OpCode::SetLocal as u8, x);
+        } else {
+            self.error("'-=' can only be used directly on an var.");
+        }
     }
 }

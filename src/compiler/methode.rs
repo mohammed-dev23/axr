@@ -1,7 +1,4 @@
-use crate::{
-    compiler::core::{TypeId::Void, TypeTag::Array},
-    value::Value::Int,
-};
+use crate::compiler::core::{TypeId::Void, TypeTag::Array};
 
 use super::*;
 
@@ -188,6 +185,11 @@ impl Parser {
         self.expression(scanner);
         let values_typetag = self.type_tag.pop().unwrap_or(TypeTag::Id(Void));
 
+        let mut array_len = self.collocations.array_len.pop().unwrap_or_else(|| {
+            self.error("Array len was not found, panic!.");
+            -1
+        });
+
         match (array_type, values_typetag) {
             (TypeTag::Array(TypeId::Int), TypeTag::Id(TypeId::Int))
             | (TypeTag::Array(TypeId::Unt), TypeTag::Id(TypeId::Unt))
@@ -206,6 +208,9 @@ impl Parser {
 
         self.emit_byte(OpCode::Push as u8);
 
+        array_len += 1;
+        self.collocations.array_len.push(array_len);
+
         if let Some(x) = self.info.last_local_slot {
             self.emit_bytes(OpCode::SetLocal as u8, x);
         } else {
@@ -221,13 +226,28 @@ impl Parser {
         let type_tag = self.type_tag.pop().unwrap_or(Array(Void)).as_typeid();
         self.type_tag.push(Id(type_tag));
 
+        let mut array_len = self.collocations.array_len.pop().unwrap_or_else(|| {
+            self.error("Array len was not found, panic!.");
+            -1
+        });
+
         self.emit_byte(OpCode::PopArray as u8);
+
+        if array_len < 0 {
+            self.error("index out of bond.");
+        }
+
+        array_len -= 1;
+
+        self.collocations.array_len.push(array_len);
 
         if let Some(x) = self.info.last_local_slot {
             self.emit_bytes(OpCode::SetLocal as u8, x);
         } else {
             self.error("pop() can only be used directly on an array.");
         }
+
+        self.emit_byte(OpCode::Pop as u8);
     }
 
     pub fn len_methode(&mut self) {

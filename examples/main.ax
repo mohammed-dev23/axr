@@ -18,4 +18,10 @@ fn main() {
 
     println(x.len());
     println(x);
+
+    let ~num = 1;
+    num += 1;
+    println(num);
+    num -= 1;
+    println(num);
 }

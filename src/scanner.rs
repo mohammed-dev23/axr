@@ -46,6 +46,8 @@ pub enum TokenType {
     Lesser,       // <
     LesserEqual,  // <=
     FatArrowLeft, // =>
+    AddAdd,       // +=
+    MinusMinus,   // -=
 
     //Literals.
     Identifier,
@@ -71,6 +73,8 @@ pub enum TokenType {
     Stop,
     Skip,
     Match,
+    For,
+    In,
 
     //Values of the boolean type
     True,
@@ -123,8 +127,20 @@ impl<'s> Scanner<'s> {
             ';' => self.make_token(TokenType::Semicolon),
             ',' => self.make_token(TokenType::Comma),
             '.' => self.make_token(TokenType::Dot),
-            '-' => self.make_token(TokenType::Minus),
-            '+' => self.make_token(TokenType::Plus),
+            '-' => {
+                if self.match_tokens('=') {
+                    self.make_token(TokenType::MinusMinus)
+                } else {
+                    self.make_token(TokenType::Minus)
+                }
+            }
+            '+' => {
+                if self.match_tokens('=') {
+                    self.make_token(TokenType::AddAdd)
+                } else {
+                    self.make_token(TokenType::Plus)
+                }
+            }
             '/' => self.make_token(TokenType::Slash),
             '*' => self.make_token(TokenType::Star),
             '_' => self.make_token(TokenType::WildCard),
@@ -340,6 +356,8 @@ impl<'s> Scanner<'s> {
             "skip" => TokenType::Skip,
             "Array" => TokenType::Array,
             "match" => TokenType::Match,
+            "for" => TokenType::For,
+            "in" => TokenType::In,
             _ => TokenType::Identifier,
         }
     }

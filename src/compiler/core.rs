@@ -14,6 +14,7 @@ pub struct Parser {
     pub(in crate::compiler) expected_type: Option<TypeTag>,
     pub(in crate::compiler) control_flow: ControlFlow,
     pub(in crate::compiler) info: Info,
+    pub(in crate::compiler) collocations: Collocations,
 }
 
 pub struct Compiler {
@@ -31,6 +32,10 @@ pub struct ControlFlow {
 pub struct Info {
     pub is_mut: Vec<bool>,
     pub last_local_slot: Option<u8>,
+}
+
+pub struct Collocations {
+    pub array_len: Vec<isize>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -145,6 +150,9 @@ impl Parser {
             info: Info {
                 is_mut: Vec::new(),
                 last_local_slot: Some(0),
+            },
+            collocations: Collocations {
+                array_len: Vec::new(),
             },
         }
     }

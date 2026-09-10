@@ -71,6 +71,8 @@ pub enum OpCode {
     Cast,
     Void,
     Pop,
+    AddAdd,
+    MinusMinus,
 }
 
 #[derive(Debug, Clone)]
