@@ -67,6 +67,13 @@ pub enum OpCode {
     //Measurement Functions
     Len,
 
+    //handlers
+    Grab,
+
+    //Wrappers
+    Some,
+    None,
+
     //Other
     Cast,
     Void,

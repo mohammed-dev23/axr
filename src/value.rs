@@ -1,6 +1,10 @@
-use std::{fmt, ops::Neg, sync::Arc};
+use std::{
+    fmt::{self},
+    ops::Neg,
+    sync::{Arc, Mutex},
+};
 
-use crate::value::Value::{Array, Bool, Char, Float, Int, Str, Unt};
+use crate::value::Value::{Array, Bool, Char, Float, Int, Opt, Str, Unt};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -10,8 +14,15 @@ pub enum Value {
     Str(Arc<str>),
     Char(char),
     Unt(u64),
-    Array(Vec<Value>),
+    Array(Arc<Mutex<Vec<Value>>>),
+    Opt(OptWrapper),
     Void,
+}
+
+#[derive(Debug, Clone)]
+pub enum OptWrapper {
+    Some(Box<Value>),
+    None,
 }
 
 #[allow(warnings)]
@@ -89,10 +100,24 @@ impl Value {
         }
     }
 
-    pub fn as_array(self) -> Option<Vec<Value>> {
+    pub fn as_char(&self) -> char {
+        match self {
+            Char(x) => *x,
+            _ => char::default(),
+        }
+    }
+
+    pub fn as_array(self) -> Option<Arc<Mutex<Vec<Value>>>> {
         match self {
             Array(x) => Some(x),
             _ => None,
+        }
+    }
+
+    pub fn as_opt(self) -> OptWrapper {
+        match self {
+            Self::Opt(x) => x,
+            _ => OptWrapper::None,
         }
     }
 }
@@ -142,6 +167,10 @@ impl fmt::Display for Value {
             Value::Char(x) => write!(f, "{}", x),
             Value::Unt(x) => write!(f, "{}", x),
             Value::Array(x) => write!(f, "{:?}", x),
+            Value::Opt(x) => match x {
+                OptWrapper::Some(x) => write!(f, "{}", x),
+                OptWrapper::None => write!(f, "None"),
+            },
             Value::Void => write!(f, "Void"),
         }
     }
@@ -159,6 +188,7 @@ impl Neg for Value {
             Self::Char(x) => Char(x),
             Self::Unt(x) => Unt(x),
             Self::Array(x) => Array(x),
+            Self::Opt(x) => Opt(x),
             Self::Void => Self::Void,
         }
     }

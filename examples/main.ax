@@ -1,11 +1,13 @@
+const SOMEV : Opt[int] = Some(199);
+const NONEV : Opt[int] = None;
+
 fn main() {
     let ~x : Array[int] = [];
-
     x.push(1);
 
     println(x[0 to unt]);
 
-    let z = x.pop();
+    let z = x.pop().grab();
     println(z);
 
     x.push(1);
@@ -24,4 +26,11 @@ fn main() {
     println(num);
     num -= 1;
     println(num);
+
+    let nnn : Opt[int] = Some(10);
+    println(nnn.grab());
+    println(SOMEV.grab());
+    let panic_for_me_like_a_good_boy : Opt[str] = None;
+    // println(panic_for_me_like_a_good_boy.grab());
+    //println(NONEV.grab());
 }

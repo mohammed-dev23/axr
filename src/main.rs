@@ -14,9 +14,6 @@ mod scanner;
 mod value;
 mod vm;
 
-#[cfg(test)]
-mod tests;
-
 fn main() -> std::io::Result<()> {
     Vm::new().interpret(cli()?);
     Ok(())

@@ -87,6 +87,9 @@ pub enum TokenType {
     Bool,
     Unt,
     Array,
+    Opt,
+    Some,
+    None,
 
     //Other
     Error,
@@ -358,6 +361,9 @@ impl<'s> Scanner<'s> {
             "match" => TokenType::Match,
             "for" => TokenType::For,
             "in" => TokenType::In,
+            "Opt" => TokenType::Opt,
+            "Some" => TokenType::Some,
+            "None" => TokenType::None,
             _ => TokenType::Identifier,
         }
     }

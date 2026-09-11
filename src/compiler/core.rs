@@ -1,58 +1,18 @@
-use crate::compiler::core::TypeId::Void;
-
 use super::*;
+use crate::compiler::core::{TypeId::Void, TypeTag::Array};
 
-pub struct Parser {
-    pub(in crate::compiler) current: Token,
-    pub(in crate::compiler) previous: Token,
-    pub(in crate::compiler) had_err: bool,
-    pub(in crate::compiler) painc_mode: bool,
-    pub(in crate::compiler) compiling_chunk: Chunk,
-    pub(in crate::compiler) compiler: Compiler,
-    pub(in crate::compiler) const_table: HashMap<String, (Value, TypeTag)>,
-    pub(in crate::compiler) type_tag: Vec<TypeTag>,
-    pub(in crate::compiler) expected_type: Option<TypeTag>,
-    pub(in crate::compiler) control_flow: ControlFlow,
-    pub(in crate::compiler) info: Info,
-    pub(in crate::compiler) collocations: Collocations,
-}
-
-pub struct Compiler {
-    pub(in crate::compiler) locals: Vec<Local>,
-    pub(in crate::compiler) local_count: i32,
-    pub(in crate::compiler) scope_depth: i32,
-}
-
-pub struct ControlFlow {
-    pub loop_starts: Vec<usize>,
-    pub stops: Vec<Vec<u8>>,
-    pub locals_in: Vec<i32>,
-}
-
-pub struct Info {
-    pub is_mut: Vec<bool>,
-    pub last_local_slot: Option<u8>,
-}
-
-pub struct Collocations {
-    pub array_len: Vec<isize>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum TypeTag {
-    Id(TypeId),
-    Array(TypeId),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum TypeId {
-    Int,
-    Float,
-    Str,
-    Bool,
-    Char,
-    Unt,
-    Void,
+impl TokenType {
+    pub fn as_typeid(&self) -> Option<TypeId> {
+        match self {
+            TokenType::Int => Some(TypeId::Int),
+            TokenType::Unt => Some(TypeId::Unt),
+            TokenType::Float => Some(TypeId::Float),
+            TokenType::Str => Some(TypeId::Str),
+            TokenType::Char => Some(TypeId::Char),
+            TokenType::Void => Some(TypeId::None),
+            _ => None,
+        }
+    }
 }
 
 impl TypeTag {
@@ -106,6 +66,53 @@ impl fmt::Display for TypeTag {
     }
 }
 
+impl Wrappers {
+    pub fn extract(self) -> TypeTag {
+        match self {
+            Self::None(x) => x,
+            Self::Opt(x) => x,
+        }
+    }
+
+    pub fn as_typeid(&self) -> TypeId {
+        self.extract().as_typeid()
+    }
+
+    pub fn as_bytes(&self) -> u8 {
+        match self {
+            Wrappers::Opt(x) => 0x40 | x.as_bytes(),
+            Wrappers::None(x) => x.as_bytes(),
+        }
+    }
+
+    #[allow(warnings)]
+    pub fn from_bytes(byte: u8) -> Self {
+        let inner = TypeTag::from_bytes(byte & !0x40);
+
+        if byte & 0x40 != 0 {
+            Wrappers::Opt(inner)
+        } else {
+            Wrappers::None(inner)
+        }
+    }
+
+    pub fn is_opt(&self) -> bool {
+        match self {
+            Self::Opt(_) => true,
+            Self::None(_) => false,
+        }
+    }
+}
+
+impl fmt::Display for Wrappers {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Wrappers::Opt(x) => write!(f, "Opt[{}]", x),
+            Wrappers::None(x) => write!(f, "{}", x),
+        }
+    }
+}
+
 impl fmt::Display for TypeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -116,6 +123,7 @@ impl fmt::Display for TypeId {
             TypeId::Void => write!(f, "void"),
             TypeId::Char => write!(f, "char"),
             TypeId::Unt => write!(f, "unt"),
+            TypeId::None => write!(f, "None"),
         }
     }
 }
@@ -150,9 +158,6 @@ impl Parser {
             info: Info {
                 is_mut: Vec::new(),
                 last_local_slot: Some(0),
-            },
-            collocations: Collocations {
-                array_len: Vec::new(),
             },
         }
     }
@@ -250,7 +255,17 @@ impl Parser {
                 return;
             } else {
                 match self.current.token_type {
-                    TokenType::Print | TokenType::Let | TokenType::Const | TokenType::Println => {
+                    TokenType::Print
+                    | TokenType::Println
+                    | TokenType::Let
+                    | TokenType::Const
+                    | TokenType::Fn
+                    | TokenType::If
+                    | TokenType::While
+                    | TokenType::Loop
+                    | TokenType::Match
+                    | TokenType::LeftBrace
+                    | TokenType::RightBrace => {
                         return;
                     }
                     _ => self.advance(scanner),
@@ -259,124 +274,36 @@ impl Parser {
         }
     }
 
-    pub fn type_check(&mut self, type_tag: TypeTag, token: &TokenType) {
-        match token {
-            TokenType::Int => {
-                if type_tag != Id(TypeId::Int) {
-                    self.error(&format!(
-                        "Mismatched types, expected [int] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Float => {
-                if type_tag != Id(TypeId::Float) {
-                    self.error(&format!(
-                        "Mismatched types, expected [float] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Str => {
-                if type_tag != Id(TypeId::Str) {
-                    self.error(&format!(
-                        "Mismatched types, expected [str] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Bool => {
-                if type_tag != Id(TypeId::Bool) {
-                    self.error(&format!(
-                        "Mismatched types, expected [bool] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Char => {
-                if type_tag != Id(TypeId::Char) {
-                    self.error(&format!(
-                        "Mismatched types, expected [char] found [{}]",
-                        type_tag
-                    ))
-                }
-            }
-            TokenType::Unt => {
-                if type_tag != Id(TypeId::Unt) {
-                    self.error(&format!(
-                        "Mismatched types, expected [unt] found [{}]",
-                        type_tag
-                    ));
-                }
-            }
-            TokenType::Void => {
-                if type_tag != Id(TypeId::Void) {
-                    self.error(&format!(
-                        "Mismatched types, expected [void] found [{}]",
-                        type_tag
-                    ));
+    pub fn type_check(
+        &mut self,
+        type_tag: &Wrappers,
+        token: &TokenType,
+        is_array: bool,
+        is_opt: bool,
+    ) {
+        if let Some(id) = token.as_typeid() {
+            let expected = match (is_array, is_opt) {
+                (true, false) => Wrappers::None(Array(id)),
+                (true, true) => Wrappers::Opt(Array(id)),
+                (false, true) => Wrappers::Opt(Id(id)),
+                (false, false) => Wrappers::None(Id(id)),
+            };
+
+            if &expected != type_tag {
+                let kind = match (is_array, is_opt) {
+                    (true, false) => format!("Array[{}]", id),
+                    (true, true) => format!("Opt[Array[{}]]", id),
+                    (false, true) => format!("Opt[{}]", id),
+                    (false, false) => format!("{}", id),
                 };
+
+                self.error(&format!(
+                    "Mismatched types, expected [{}] found [{}]",
+                    kind, type_tag
+                ));
             }
-            TokenType::Array => match token {
-                TokenType::Int => {
-                    if type_tag != TypeTag::Array(TypeId::Int) {
-                        self.error(&format!(
-                            "Mismatched types, expected [int] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Float => {
-                    if type_tag != TypeTag::Array(TypeId::Float) {
-                        self.error(&format!(
-                            "Mismatched types, expected [float] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Str => {
-                    if type_tag != TypeTag::Array(TypeId::Str) {
-                        self.error(&format!(
-                            "Mismatched types, expected [str] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Bool => {
-                    if type_tag != TypeTag::Array(TypeId::Bool) {
-                        self.error(&format!(
-                            "Mismatched types, expected [bool] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Char => {
-                    if type_tag != TypeTag::Array(TypeId::Char) {
-                        self.error(&format!(
-                            "Mismatched types, expected [char] found [{}]",
-                            type_tag
-                        ))
-                    }
-                }
-                TokenType::Unt => {
-                    if type_tag != TypeTag::Array(TypeId::Unt) {
-                        self.error(&format!(
-                            "Mismatched types, expected [unt] found [{}]",
-                            type_tag
-                        ));
-                    }
-                }
-                TokenType::Void => {
-                    if type_tag != TypeTag::Array(TypeId::Void) {
-                        self.error(&format!(
-                            "Mismatched types, expected [void] found [{}]",
-                            type_tag
-                        ));
-                    };
-                }
-                _ => return,
-            },
-            _ => return,
+        } else {
+            return;
         }
     }
 
@@ -384,5 +311,24 @@ impl Parser {
     pub fn debug_parser(&self, num: usize) {
         println!("{} >> {}", self.previous.start, num);
         println!("{} >> {}", self.current.start, num)
+    }
+
+    pub fn parse_array_typetag(&mut self, scanner: &mut Scanner) -> (TypeTag, bool) {
+        self.consume(TokenType::LeftBracket, "Exp", scanner);
+
+        let array = match self.current.token_type {
+            TokenType::Int => TypeTag::Array(TypeId::Int),
+            TokenType::Unt => TypeTag::Array(TypeId::Unt),
+            TokenType::Float => TypeTag::Array(TypeId::Float),
+            TokenType::Str => TypeTag::Array(TypeId::Str),
+            TokenType::Bool => TypeTag::Array(TypeId::Bool),
+            TokenType::Char => TypeTag::Array(TypeId::Char),
+            _ => TypeTag::Array(TypeId::Void),
+        };
+
+        self.advance(scanner);
+        self.consume(TokenType::RightBracket, "exp", scanner);
+
+        (array, true)
     }
 }

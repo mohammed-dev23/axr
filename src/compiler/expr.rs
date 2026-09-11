@@ -1,4 +1,4 @@
-use crate::compiler::core::TypeId::Void;
+use std::sync::Mutex;
 
 use super::*;
 
@@ -18,47 +18,47 @@ impl Parser {
                 | TokenType::LesserEqual
         );
 
-        let type_tag2 = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
-        let type_tag1 = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag2 = self.type_tag.pop().expect(TYPETAG_ERR);
+        let type_tag1 = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match (type_tag1, type_tag2) {
-            (Id(TypeId::Int), Id(TypeId::Int))
-            | (Id(TypeId::Int), Id(TypeId::Float))
-            | (Id(TypeId::Float), Id(TypeId::Int))
-            | (Id(TypeId::Str), Id(TypeId::Str))
-            | (Id(TypeId::Unt), Id(TypeId::Unt))
-            | (Id(TypeId::Unt), Id(TypeId::Float))
-            | (Id(TypeId::Float), Id(TypeId::Unt))
-            | (Id(TypeId::Float), Id(TypeId::Float))
-            | (Id(TypeId::Bool), Id(TypeId::Bool))
-            | (Id(TypeId::Char), Id(TypeId::Char))
+            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int)))
+            | (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Float)))
+            | (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Int)))
+            | (Wrappers::None(Id(TypeId::Str)), Wrappers::None(Id(TypeId::Str)))
+            | (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt)))
+            | (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Float)))
+            | (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Unt)))
+            | (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float)))
+            | (Wrappers::None(Id(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool)))
+            | (Wrappers::None(Id(TypeId::Char)), Wrappers::None(Id(TypeId::Char)))
                 if is_comp =>
             {
-                self.type_tag.push(Id(TypeId::Bool));
+                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
             }
-            (Id(TypeId::Int), Id(TypeId::Int)) => {
-                self.type_tag.push(Id(TypeId::Int));
+            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
             }
-            (Id(TypeId::Int), Id(TypeId::Float)) => {
-                self.type_tag.push(Id(TypeId::Float));
+            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Float))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
-            (Id(TypeId::Float), Id(TypeId::Int)) => {
-                self.type_tag.push(Id(TypeId::Float));
+            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Int))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
-            (Id(TypeId::Str), Id(TypeId::Str)) => {
-                self.type_tag.push(Id(TypeId::Str));
+            (Wrappers::None(Id(TypeId::Str)), Wrappers::None(Id(TypeId::Str))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Str)));
             }
-            (Id(TypeId::Unt), Id(TypeId::Unt)) => {
-                self.type_tag.push(Id(TypeId::Unt));
+            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
             }
-            (Id(TypeId::Unt), Id(TypeId::Float)) => {
-                self.type_tag.push(Id(TypeId::Float));
+            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Float))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
-            (Id(TypeId::Float), Id(TypeId::Unt)) => {
-                self.type_tag.push(Id(TypeId::Unt));
+            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Unt))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
             }
-            (Id(TypeId::Float), Id(TypeId::Float)) => {
-                self.type_tag.push(Id(TypeId::Float));
+            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
@@ -100,17 +100,17 @@ impl Parser {
 
         self.parse_precedence(Precedence::Unary, scanner);
 
-        let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match type_tag {
-            Id(TypeId::Int) => {
-                self.type_tag.push(Id(TypeId::Int));
+            Wrappers::None(Id(TypeId::Int)) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
             }
-            Id(TypeId::Float) => {
-                self.type_tag.push(Id(TypeId::Float));
+            Wrappers::None(Id(TypeId::Float)) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
-            Id(TypeId::Bool) => {
-                self.type_tag.push(Id(TypeId::Bool));
+            Wrappers::None(Id(TypeId::Bool)) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
             }
 
             _ => self.error(&format!(
@@ -148,7 +148,7 @@ impl Parser {
         if can_assign && is_mut && self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
 
-            let rhs_typetag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+            let rhs_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
 
             if rhs_typetag != type_tag {
                 self.error(&format!(
@@ -171,21 +171,24 @@ impl Parser {
         if value.contains(".") {
             let float_value: f64 = value.parse::<f64>().unwrap_or_default();
             self.emit_constant(Value::Float(float_value));
-            self.type_tag.push(Id(TypeId::Float));
-        } else if self.expected_type.is_some_and(|t| t == Id(TypeId::Unt)) {
+            self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+        } else if self
+            .expected_type
+            .is_some_and(|t| t == Wrappers::None(Id(TypeId::Unt)))
+        {
             let unt_value = value.parse::<u64>().unwrap_or_default();
             self.emit_constant(Value::Unt(unt_value));
-            self.type_tag.push(Id(TypeId::Unt));
+            self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
         } else {
             let int_value = value.parse::<i64>();
 
             if let Ok(int) = int_value {
                 self.emit_constant(Value::Int(int));
-                self.type_tag.push(Id(TypeId::Int));
+                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
             } else {
                 let unt_value = value.parse::<u64>().unwrap_or_default();
                 self.emit_constant(Value::Unt(unt_value));
-                self.type_tag.push(Id(TypeId::Unt));
+                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
             }
         }
     }
@@ -194,15 +197,19 @@ impl Parser {
         match self.previous.token_type {
             TokenType::True => {
                 self.emit_byte(OpCode::True as u8);
-                self.type_tag.push(Id(TypeId::Bool));
+                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
             }
             TokenType::False => {
                 self.emit_byte(OpCode::False as u8);
-                self.type_tag.push(Id(TypeId::Bool));
+                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
             }
             TokenType::Void => {
                 self.emit_byte(OpCode::Void as u8);
-                self.type_tag.push(Id(TypeId::Void));
+                self.type_tag.push(Wrappers::None(Id(TypeId::Void)));
+            }
+            TokenType::None => {
+                self.emit_byte(OpCode::None as u8);
+                self.type_tag.push(Wrappers::Opt(TypeTag::Id(TypeId::None)));
             }
             _ => return,
         }
@@ -212,35 +219,35 @@ impl Parser {
         let raw = &self.previous.start;
         let trimmed = &raw[1..raw.len() - 1];
         self.emit_constant(Value::Str(Arc::from(trimmed)));
-        self.type_tag.push(Id(TypeId::Str));
+        self.type_tag.push(Wrappers::None(Id(TypeId::Str)));
     }
 
     pub fn array(&mut self, scanner: &mut Scanner, _can_assign: bool) {
         let mut array_len = 0;
-        let mut type_tag: Vec<TypeTag> = Vec::new();
-        let mut typetag: TypeTag = TypeTag::Array(TypeId::Void);
+        let mut is_opt = false;
+        let mut type_tag: Vec<Wrappers> = Vec::new();
+        let mut typetag: Wrappers = Wrappers::None(TypeTag::Array(TypeId::Void));
 
         if self.check(&TokenType::RightBracket) {
             self.advance(scanner);
 
             let expected_type = self.expected_type.take().unwrap_or_else(|| {
                 self.error("when declaring new array a type annotation is needed.");
-                TypeTag::Array(Void)
+                Wrappers::None(TypeTag::Array(Void))
             });
 
             self.emit_byte(OpCode::NewArray as u8);
-            self.collocations.array_len.push(-1);
             self.type_tag.push(expected_type);
         } else {
             self.expression(scanner);
             array_len += 1;
-            type_tag.push(self.type_tag.pop().unwrap_or(Id(TypeId::Void)));
+            type_tag.push(self.type_tag.pop().expect(TYPETAG_ERR));
 
             while self.current.token_type == TokenType::Comma {
                 self.match_consume(&TokenType::Comma, scanner);
                 self.expression(scanner);
                 array_len += 1;
-                type_tag.push(self.type_tag.pop().unwrap_or(Id(TypeId::Void)));
+                type_tag.push(self.type_tag.pop().expect(TYPETAG_ERR));
             }
 
             if let Some(first) = type_tag.first() {
@@ -251,7 +258,12 @@ impl Parser {
                 }
 
                 if let Some(x) = self.expected_type {
-                    if x != TypeTag::Array(first.as_typeid()) {
+                    let none_var = Wrappers::None(TypeTag::Array(first.as_typeid()));
+                    let opt_var = Wrappers::Opt(TypeTag::Array(first.as_typeid()));
+
+                    if x == opt_var {
+                        is_opt = true;
+                    } else if x != none_var {
                         self.error(&format!(
                             "Mismatched types, expected {} found Array[{}]",
                             x, first
@@ -268,32 +280,26 @@ impl Parser {
 
             self.emit_byte(OpCode::Array as u8);
             self.emit_byte(array_len as u8);
-            self.collocations.array_len.push(array_len as isize);
-            self.type_tag.push(TypeTag::Array(typetag.as_typeid()));
+
+            if !is_opt {
+                self.type_tag
+                    .push(Wrappers::None(TypeTag::Array(typetag.as_typeid())));
+            } else {
+                self.type_tag
+                    .push(Wrappers::Opt(TypeTag::Array(typetag.as_typeid())))
+            }
         }
     }
 
     pub fn index_array(&mut self, scanner: &mut Scanner) {
         self.expression(scanner);
-        let type_tag = self.type_tag.last().unwrap_or(&Id(TypeId::Void));
+        let type_tag = self.type_tag.last().expect(TYPETAG_ERR);
 
-        if type_tag != &Id(TypeId::Unt) {
+        if type_tag != &Wrappers::None(Id(TypeId::Unt)) {
             self.error(&format!(
                 "Expected unt type in indexing found [{}]",
                 type_tag
             ));
-        }
-
-        let array_len = match self.collocations.array_len.last() {
-            Some(x) => x,
-            None => {
-                self.error("Array len was not found, panic!.");
-                &-1
-            }
-        };
-
-        if array_len < &0 {
-            self.error("index out of bond.");
         }
 
         self.consume(
@@ -316,10 +322,10 @@ impl Parser {
         }
 
         self.emit_constant(Value::Char(into_chars[0]));
-        self.type_tag.push(Id(TypeId::Char));
+        self.type_tag.push(Wrappers::None(Id(TypeId::Char)));
     }
 
-    pub fn const_value(&mut self, scanner: &mut Scanner) -> (Value, TypeTag) {
+    pub fn const_value(&mut self, scanner: &mut Scanner) -> (Value, Wrappers) {
         self.advance(scanner);
 
         match &self.previous.token_type {
@@ -327,22 +333,28 @@ impl Parser {
                 let txt = &self.previous.start;
                 if txt.contains('.') {
                     let value = txt.parse::<f64>().unwrap_or(0.0);
-                    (Value::Float(value), Id(TypeId::Float))
-                } else if self.expected_type.is_some_and(|t| t == Id(TypeId::Unt)) {
+                    (Value::Float(value), Wrappers::None(Id(TypeId::Float)))
+                } else if self
+                    .expected_type
+                    .is_some_and(|t| t == Wrappers::None(Id(TypeId::Unt)))
+                {
                     let value = txt.parse::<u64>().unwrap_or(0);
-                    (Value::Unt(value), Id(TypeId::Unt))
+                    (Value::Unt(value), Wrappers::None(Id(TypeId::Unt)))
                 } else {
                     let value = txt.parse::<i64>().unwrap_or(0);
-                    (Value::Int(value), Id(TypeId::Int))
+                    (Value::Int(value), Wrappers::None(Id(TypeId::Int)))
                 }
             }
             TokenType::String => {
                 let raw = &self.previous.start;
                 let trimmed = &raw[1..raw.len() - 1];
-                (Value::Str(Arc::from(trimmed)), Id(TypeId::Str))
+                (
+                    Value::Str(Arc::from(trimmed)),
+                    Wrappers::None(Id(TypeId::Str)),
+                )
             }
-            TokenType::True => (Value::Bool(true), Id(TypeId::Bool)),
-            TokenType::False => (Value::Bool(false), Id(TypeId::Bool)),
+            TokenType::True => (Value::Bool(true), Wrappers::None(Id(TypeId::Bool))),
+            TokenType::False => (Value::Bool(false), Wrappers::None(Id(TypeId::Bool))),
             TokenType::Char => {
                 let raw = &self.previous.start;
                 let trimmed = &raw[1..raw.len() - 1];
@@ -350,10 +362,10 @@ impl Parser {
 
                 if into_chars.len() != 1 {
                     self.error("Char type cannot contain more than one char.");
-                    return (Value::Void, Id(TypeId::Void));
+                    return (Value::Void, Wrappers::None(Id(TypeId::Void)));
                 }
 
-                (Value::Char(into_chars[0]), Id(TypeId::Char))
+                (Value::Char(into_chars[0]), Wrappers::None(Id(TypeId::Char)))
             }
             TokenType::LeftBracket => {
                 let mut values = Vec::new();
@@ -375,7 +387,7 @@ impl Parser {
 
                 let expected_array_type = self.expected_type.take().unwrap_or_else(|| {
                     self.error("Array[Type] annotation needed.");
-                    return TypeTag::Array(Void);
+                    Wrappers::None(TypeTag::Array(Void))
                 });
 
                 self.consume(
@@ -385,15 +397,46 @@ impl Parser {
                 );
 
                 (
-                    Value::Array(values),
-                    TypeTag::Array(expected_array_type.as_typeid()),
+                    Value::Array(Arc::new(Mutex::new(values))),
+                    Wrappers::None(TypeTag::Array(expected_array_type.as_typeid())),
                 )
             }
 
-            TokenType::Void => (Value::Void, Id(TypeId::Void)),
+            TokenType::Void => (Value::Void, Wrappers::None(Id(TypeId::Void))),
+            TokenType::Some => {
+                let outer_expected = self.expected_type.take();
+                self.expected_type = outer_expected.map(|w| Wrappers::None(w.extract()));
+
+                self.consume(TokenType::LeftParen, "Expect '(' after Some", scanner);
+                let (value, inner_type) = self.const_value(scanner);
+                self.consume(TokenType::RigtParen, "Enclosed '(' expect ')'", scanner);
+
+                if let Some(outer) = outer_expected {
+                    let expected_inner = Wrappers::None(outer.extract());
+                    if inner_type != expected_inner {
+                        self.error(&format!(
+                            "Mismatched types, expected [{}] found [{}] inside 'Some(...)'",
+                            expected_inner, inner_type
+                        ));
+                    }
+                } else {
+                    self.error(
+                        "Some(...) needs a type context, e.g. `const X : Opt[int] = Some(5);`",
+                    );
+                }
+
+                (
+                    Value::Opt(crate::value::OptWrapper::Some(Box::new(value))),
+                    Wrappers::Opt(inner_type.extract()),
+                )
+            }
+            TokenType::None => (
+                Value::Opt(crate::value::OptWrapper::None),
+                Wrappers::Opt(TypeTag::Id(TypeId::None)),
+            ),
             _ => {
                 self.error("const value must be a literal (number, string, bool, Array,or Void).");
-                return (Value::Void, Id(TypeId::Void));
+                (Value::Void, Wrappers::None(Id(TypeId::Void)))
             }
         }
     }
@@ -422,34 +465,37 @@ impl Parser {
         self.mark_initialized();
     }
 
-    pub fn define_const(&mut self, name: String, value: Value, type_tag: &TypeTag) {
+    pub fn define_const(&mut self, name: String, value: Value, type_tag: &Wrappers) {
         self.const_table.insert(name, (value, *type_tag));
     }
 
     pub fn casting(&mut self, scanner: &mut Scanner) {
-        let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag = self
+            .type_tag
+            .pop()
+            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
 
         self.advance(scanner);
         let token = self.previous.token_type;
 
         let target = match token {
-            TokenType::Int => Id(TypeId::Int),
-            TokenType::Unt => Id(TypeId::Unt),
-            TokenType::Float => Id(TypeId::Float),
-            TokenType::Str => Id(TypeId::Str),
-            TokenType::Bool => Id(TypeId::Bool),
-            TokenType::Char => Id(TypeId::Char),
-            _ => Id(TypeId::Void),
+            TokenType::Int => Wrappers::None(Id(TypeId::Int)),
+            TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
+            TokenType::Float => Wrappers::None(Id(TypeId::Float)),
+            TokenType::Str => Wrappers::None(Id(TypeId::Str)),
+            TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
+            TokenType::Char => Wrappers::None(Id(TypeId::Char)),
+            _ => Wrappers::None(Id(TypeId::Void)),
         };
 
         match (type_tag, target) {
-            (Id(TypeId::Str), _) => {
+            (Wrappers::None(Id(TypeId::Str)), _) => {
                 self.error(&format!("non-primitive cast: `str` to `{}`", target));
             }
-            (Id(TypeId::Char), _) => {
+            (Wrappers::None(Id(TypeId::Char)), _) => {
                 self.error(&format!("non-primitive cast: `char` to `{}`", target));
             }
-            (Id(TypeId::Bool), _) => {
+            (Wrappers::None(Id(TypeId::Bool)), _) => {
                 self.error(&format!("non-primitive cast: `bool` to `{}`", target));
             }
             _ => {}
@@ -462,7 +508,10 @@ impl Parser {
     }
 
     pub fn or_expr(&mut self, scanner: &mut Scanner) {
-        let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag = self
+            .type_tag
+            .pop()
+            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
 
         let else_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         let end_jump = self.emit_jump(OpCode::Jump as usize);
@@ -471,38 +520,47 @@ impl Parser {
         self.emit_byte(OpCode::Pop as u8);
 
         self.parse_precedence(Precedence::Or, scanner);
-        let type_tag2 = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag2 = self
+            .type_tag
+            .pop()
+            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
 
         match (type_tag, type_tag2) {
-            (Id(TypeId::Bool), Id(TypeId::Bool)) => {}
+            (Wrappers::None(Id(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool))) => {}
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
                 type_tag, type_tag2
             )),
         }
 
-        self.type_tag.push(Id(TypeId::Bool));
+        self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
         self.patch_jump(end_jump as usize);
     }
 
     pub fn and_expr(&mut self, scanner: &mut Scanner) {
-        let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag = self
+            .type_tag
+            .pop()
+            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
 
         let end_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         self.emit_byte(OpCode::Pop as u8);
 
         self.parse_precedence(Precedence::And, scanner);
-        let type_tag2 = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+        let type_tag2 = self
+            .type_tag
+            .pop()
+            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
 
         match (type_tag, type_tag2) {
-            (Id(TypeId::Bool), Id(TypeId::Bool)) => {}
+            (Wrappers::None(Id(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool))) => {}
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
                 type_tag, type_tag2
             )),
         }
 
-        self.type_tag.push(Id(TypeId::Bool));
+        self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
         self.patch_jump(end_jump as usize);
     }
 
@@ -511,27 +569,27 @@ impl Parser {
             self.error("Value must be mutated in order to use += on it!");
         }
 
-        let type_tag_lhs = self.type_tag.pop().unwrap_or(Id(Void));
+        let type_tag_lhs = self.type_tag.pop().expect(TYPETAG_ERR);
         self.expression(scanner);
-        let type_tag_rhs = self.type_tag.pop().unwrap_or(Id(Void));
+        let type_tag_rhs = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match (type_tag_rhs, type_tag_lhs) {
-            (TypeTag::Id(TypeId::Int), TypeTag::Id(TypeId::Int)) => {
-                self.type_tag.push(Id(TypeId::Int));
+            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
             }
-            (TypeTag::Id(TypeId::Unt), TypeTag::Id(TypeId::Unt)) => {
-                self.type_tag.push(Id(TypeId::Unt));
+            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
             }
-            (TypeTag::Id(TypeId::Float), TypeTag::Id(TypeId::Float)) => {
-                self.type_tag.push(Id(TypeId::Float));
+            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
-            (TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float), _) => {
+            (Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float)), _) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
                 ));
             }
-            (_, TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float)) => {
+            (_, Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float))) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
@@ -557,27 +615,27 @@ impl Parser {
             self.error("Value must be mutated in order to use -= on it!");
         }
 
-        let type_tag_lhs = self.type_tag.pop().unwrap_or(Id(Void));
+        let type_tag_lhs = self.type_tag.pop().expect(TYPETAG_ERR);
         self.expression(scanner);
-        let type_tag_rhs = self.type_tag.pop().unwrap_or(Id(Void));
+        let type_tag_rhs = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match (type_tag_rhs, type_tag_lhs) {
-            (TypeTag::Id(TypeId::Int), TypeTag::Id(TypeId::Int)) => {
-                self.type_tag.push(Id(TypeId::Int));
+            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
             }
-            (TypeTag::Id(TypeId::Unt), TypeTag::Id(TypeId::Unt)) => {
-                self.type_tag.push(Id(TypeId::Unt));
+            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
             }
-            (TypeTag::Id(TypeId::Float), TypeTag::Id(TypeId::Float)) => {
-                self.type_tag.push(Id(TypeId::Float));
+            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float))) => {
+                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
             }
-            (TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float), _) => {
+            (Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float)), _) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
                 ));
             }
-            (_, TypeTag::Id(TypeId::Int | TypeId::Unt | TypeId::Float)) => {
+            (_, Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float))) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
@@ -596,5 +654,39 @@ impl Parser {
         } else {
             self.error("'-=' can only be used directly on an var.");
         }
+    }
+
+    pub fn some_expr(&mut self, scanner: &mut Scanner, _can_assign: bool) {
+        let outer_expected = self.expected_type.take();
+        self.expected_type = outer_expected.map(|w| Wrappers::None(w.extract()));
+
+        self.consume(TokenType::LeftParen, "Expect '(' after Some", scanner);
+        self.expression(scanner);
+        self.type_tag.pop();
+        self.consume(TokenType::RigtParen, "Enclosed '(' expect ')'", scanner);
+
+        let type_tag = self.expected_type.take().expect(TYPETAG_ERR);
+
+        let Some(outer) = outer_expected else {
+            self.error("Some(...) needs a type context, e.g. `let x : Opt[int] = Some(5);`");
+            self.emit_byte(OpCode::Some as u8);
+            self.emit_byte(type_tag.as_bytes());
+            self.type_tag.push(Wrappers::Opt(type_tag.extract()));
+            return;
+        };
+
+        let expected_inner = Wrappers::None(outer.extract());
+
+        if type_tag != expected_inner {
+            self.error(&format!(
+                "Mismatched types, expected [{}] found [{}] inside 'Some(...)'",
+                expected_inner, type_tag
+            ));
+        }
+
+        let res_type = Wrappers::Opt(type_tag.extract());
+        self.emit_byte(OpCode::Some as u8);
+        self.emit_byte(res_type.as_bytes());
+        self.type_tag.push(res_type);
     }
 }

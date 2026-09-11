@@ -1,7 +1,6 @@
 use super::*;
 use crate::chunk::OpCode::Jump;
 use crate::compiler::TypeTag::Id;
-use crate::compiler::core::TypeId::Void;
 
 impl Parser {
     pub fn statement(&mut self, scanner: &mut Scanner) {
@@ -69,7 +68,12 @@ impl Parser {
         }
         self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
         self.expression(scanner);
-        self.type_tag.pop();
+
+        let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
+        if type_tag.is_opt() {
+            self.error("'Opt' is not implemented for 'Println()'");
+        }
+
         self.consume(TokenType::RigtParen, "Expect ')' aftre value.", scanner);
         self.consume(
             TokenType::Semicolon,
@@ -86,7 +90,12 @@ impl Parser {
         }
         self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
         self.expression(scanner);
-        self.type_tag.pop();
+        let typetag = self.type_tag.pop().expect(TYPETAG_ERR);
+
+        if typetag.is_opt() {
+            self.error("'Opt' is not implemented for 'Println()'");
+        }
+
         self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
         self.consume(
             TokenType::Semicolon,
@@ -137,49 +146,84 @@ impl Parser {
             None
         };
 
-        let array = if annotation_type.is_some_and(|t| t == TokenType::Array) {
+        let mut is_opt = false;
+
+        let (array, mut is_array) = if annotation_type.is_some_and(|t| t == TokenType::Array) {
+            self.parse_array_typetag(scanner)
+        } else {
+            (TypeTag::Array(TypeId::Void), false)
+        };
+
+        let opt = if annotation_type.is_some_and(|t| t == TokenType::Opt) {
             self.consume(TokenType::LeftBracket, "Exp", scanner);
 
-            let array = match self.current.token_type {
-                TokenType::Int => TypeTag::Array(TypeId::Int),
-                TokenType::Unt => TypeTag::Array(TypeId::Unt),
-                TokenType::Float => TypeTag::Array(TypeId::Float),
-                TokenType::Str => TypeTag::Array(TypeId::Str),
-                TokenType::Bool => TypeTag::Array(TypeId::Bool),
-                TokenType::Char => TypeTag::Array(TypeId::Char),
-                _ => TypeTag::Array(TypeId::Void),
+            self.advance(scanner);
+
+            let opt = match self.previous.token_type {
+                TokenType::Int => Wrappers::Opt(Id(TypeId::Int)),
+                TokenType::Unt => Wrappers::Opt(Id(TypeId::Unt)),
+                TokenType::Float => Wrappers::Opt(Id(TypeId::Float)),
+                TokenType::Str => Wrappers::Opt(Id(TypeId::Str)),
+                TokenType::Char => Wrappers::Opt(Id(TypeId::Char)),
+                TokenType::Array => {
+                    is_array = true;
+                    Wrappers::Opt(self.parse_array_typetag(scanner).0)
+                }
+                _ => Wrappers::Opt(Id(TypeId::Void)),
             };
 
-            self.advance(scanner);
             self.consume(TokenType::RightBracket, "exp", scanner);
-            array
+            is_opt = true;
+            opt
         } else {
-            TypeTag::Array(TypeId::Void)
+            Wrappers::Opt(TypeTag::Id(Void))
         };
 
         self.expected_type = annotation_type.map(|t| match t {
-            TokenType::Int => Id(TypeId::Int),
-            TokenType::Str => Id(TypeId::Str),
-            TokenType::Bool => Id(TypeId::Bool),
-            TokenType::Float => Id(TypeId::Float),
-            TokenType::Char => Id(TypeId::Char),
-            TokenType::Unt => Id(TypeId::Unt),
-            TokenType::Array => array,
-            _ => Id(TypeId::Void),
+            TokenType::Int => Wrappers::None(Id(TypeId::Int)),
+            TokenType::Str => Wrappers::None(Id(TypeId::Str)),
+            TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
+            TokenType::Float => Wrappers::None(Id(TypeId::Float)),
+            TokenType::Char => Wrappers::None(Id(TypeId::Char)),
+            TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
+            TokenType::Array => Wrappers::None(array),
+            TokenType::Opt => opt,
+            _ => Wrappers::None(Id(TypeId::Void)),
         });
 
         if self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
         } else {
             self.emit_byte(OpCode::Void as u8);
-            self.type_tag.push(Id(TypeId::Void));
+            self.type_tag.push(Wrappers::None(Id(TypeId::Void)));
         }
-        let type_tag = self.type_tag.pop().unwrap_or(Id(TypeId::Void));
+
+        let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         self.compiler.locals[self.compiler.local_count as usize - 1].type_tag = type_tag;
 
         if let Some(token) = annotation_type {
-            self.type_check(type_tag, &token);
+            match token {
+                TokenType::Opt => {
+                    if type_tag != Wrappers::Opt(TypeTag::Id(TypeId::None)) && type_tag != opt {
+                        self.error(&format!(
+                            "Mismatched types, expected [{}] found [{}]",
+                            opt, type_tag
+                        ));
+                    }
+                }
+                TokenType::Array => {
+                    let array = Wrappers::None(array);
+
+                    if type_tag != array {
+                        self.error(&format!(
+                            "Mismatched types, expected [{}] found [{}]",
+                            opt, type_tag
+                        ));
+                    }
+                }
+                _ => self.type_check(&type_tag, &token, is_array, is_opt),
+            }
         }
 
         self.consume(
@@ -208,40 +252,87 @@ impl Parser {
         self.advance(scanner);
         let annotation_type = self.previous.token_type;
 
-        let array = {
+        let mut is_array = false;
+        let mut is_opt = false;
+
+        let array = if annotation_type == TokenType::Array {
             self.consume(TokenType::LeftBracket, "Exp", scanner);
 
             let array = match self.current.token_type {
-                TokenType::Int => TypeTag::Array(TypeId::Int),
-                TokenType::Unt => TypeTag::Array(TypeId::Unt),
-                TokenType::Float => TypeTag::Array(TypeId::Float),
-                TokenType::Str => TypeTag::Array(TypeId::Str),
-                TokenType::Bool => TypeTag::Array(TypeId::Bool),
-                TokenType::Char => TypeTag::Array(TypeId::Char),
-                _ => TypeTag::Array(TypeId::Void),
+                TokenType::Int => Wrappers::None(TypeTag::Array(TypeId::Int)),
+                TokenType::Unt => Wrappers::None(TypeTag::Array(TypeId::Unt)),
+                TokenType::Float => Wrappers::None(TypeTag::Array(TypeId::Float)),
+                TokenType::Str => Wrappers::None(TypeTag::Array(TypeId::Str)),
+                TokenType::Bool => Wrappers::None(TypeTag::Array(TypeId::Bool)),
+                TokenType::Char => Wrappers::None(TypeTag::Array(TypeId::Char)),
+                _ => Wrappers::None(TypeTag::Array(TypeId::Void)),
             };
 
             self.advance(scanner);
             self.consume(TokenType::RightBracket, "Exp", scanner);
+            is_array = true;
             array
+        } else {
+            Wrappers::None(Array(Void))
+        };
+
+        let opt = if annotation_type == TokenType::Opt {
+            self.consume(TokenType::LeftBracket, "Exp", scanner);
+
+            let opt = match self.current.token_type {
+                TokenType::Int => Wrappers::Opt(TypeTag::Id(TypeId::Int)),
+                TokenType::Unt => Wrappers::Opt(TypeTag::Id(TypeId::Unt)),
+                TokenType::Float => Wrappers::Opt(TypeTag::Id(TypeId::Float)),
+                TokenType::Str => Wrappers::Opt(TypeTag::Id(TypeId::Str)),
+                TokenType::Bool => Wrappers::Opt(TypeTag::Id(TypeId::Bool)),
+                TokenType::Char => Wrappers::Opt(TypeTag::Id(TypeId::Char)),
+                TokenType::Array => Wrappers::Opt(array.extract()),
+                _ => Wrappers::None(TypeTag::Id(TypeId::Void)),
+            };
+
+            self.advance(scanner);
+            self.consume(TokenType::RightBracket, "Exp", scanner);
+            is_opt = true;
+            opt
+        } else {
+            Wrappers::Opt(Id(Void))
         };
 
         self.expected_type = match annotation_type {
-            TokenType::Int => Some(Id(TypeId::Int)),
-            TokenType::Str => Some(Id(TypeId::Str)),
-            TokenType::Bool => Some(Id(TypeId::Bool)),
-            TokenType::Float => Some(Id(TypeId::Float)),
-            TokenType::Char => Some(Id(TypeId::Char)),
-            TokenType::Unt => Some(Id(TypeId::Unt)),
+            TokenType::Int => Some(Wrappers::None(Id(TypeId::Int))),
+            TokenType::Str => Some(Wrappers::None(Id(TypeId::Str))),
+            TokenType::Bool => Some(Wrappers::None(Id(TypeId::Bool))),
+            TokenType::Float => Some(Wrappers::None(Id(TypeId::Float))),
+            TokenType::Char => Some(Wrappers::None(Id(TypeId::Char))),
+            TokenType::Unt => Some(Wrappers::None(Id(TypeId::Unt))),
             TokenType::Array => Some(array),
-            _ => Some(Id(TypeId::Void)),
+            TokenType::Opt => Some(opt),
+            _ => Some(Wrappers::None(Id(TypeId::Void))),
         };
 
         self.consume(TokenType::Equal, "Expect '=' after const name.", scanner);
 
         let (const_value, type_tag) = self.const_value(scanner);
 
-        self.type_check(type_tag, &annotation_type);
+        match annotation_type {
+            TokenType::Opt => {
+                if type_tag != Wrappers::Opt(TypeTag::Id(TypeId::None)) && type_tag != opt {
+                    self.error(&format!(
+                        "Mismatched types, expected [{}] found [{}]",
+                        opt, type_tag
+                    ));
+                }
+            }
+            TokenType::Array => {
+                if type_tag != array {
+                    self.error(&format!(
+                        "Mismatched types, expected [{}] found [{}]",
+                        opt, type_tag
+                    ));
+                }
+            }
+            _ => self.type_check(&type_tag, &annotation_type, is_array, is_opt),
+        }
 
         self.consume(
             TokenType::Semicolon,
@@ -374,10 +465,10 @@ impl Parser {
 
     pub fn match_stmt(&mut self, scanner: &mut Scanner) {
         let mut jumps: Vec<usize> = Vec::new();
-        let mut type_tags: Vec<TypeTag> = Vec::new();
+        let mut type_tags: Vec<Wrappers> = Vec::new();
 
         self.expression(scanner);
-        let ftype_tag = self.type_tag.pop().unwrap_or(Id(Void));
+        let ftype_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         self.begin_scope();
 
@@ -389,7 +480,7 @@ impl Parser {
 
         self.emit_byte(OpCode::Dup as u8);
         self.expression(scanner);
-        type_tags.push(self.type_tag.pop().unwrap_or(Id(Void)));
+        type_tags.push(self.type_tag.pop().expect(TYPETAG_ERR));
         self.emit_byte(OpCode::EqualTo as u8);
 
         let next_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
@@ -421,7 +512,7 @@ impl Parser {
         while self.current.token_type != TokenType::WildCard {
             self.emit_byte(OpCode::Dup as u8);
             self.expression(scanner);
-            type_tags.push(self.type_tag.pop().unwrap_or(Id(Void)));
+            type_tags.push(self.type_tag.pop().expect(TYPETAG_ERR));
             self.emit_byte(OpCode::EqualTo as u8);
 
             let next_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
