@@ -6,6 +6,7 @@ pub mod locals;
 pub mod methode;
 pub mod rules;
 pub mod stmt;
+mod type_safety;
 
 use crate::{
     chunk::{Chunk, OpCode},
@@ -74,4 +75,39 @@ pub enum TypeId {
     #[allow(warnings)]
     None,
     Void,
+}
+
+impl Compiler {
+    pub fn new() -> Self {
+        Self {
+            locals: Vec::new(),
+            local_count: 0,
+            scope_depth: 0,
+        }
+    }
+}
+
+impl Parser {
+    pub fn new() -> Self {
+        Self {
+            current: Token::default(),
+            previous: Token::default(),
+            had_err: false,
+            painc_mode: false,
+            compiling_chunk: Chunk::new(),
+            compiler: Compiler::new(),
+            const_table: HashMap::new(),
+            type_tag: Vec::new(),
+            expected_type: None,
+            control_flow: ControlFlow {
+                loop_starts: Vec::new(),
+                stops: Vec::new(),
+                locals_in: Vec::new(),
+            },
+            info: Info {
+                is_mut: Vec::new(),
+                last_local_slot: Some(0),
+            },
+        }
+    }
 }

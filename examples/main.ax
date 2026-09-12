@@ -1,36 +1,8 @@
-const SOMEV : Opt[int] = Some(199);
-const NONEV : Opt[int] = None;
-
 fn main() {
-    let ~x : Array[int] = [];
-    x.push(1);
+    for (let ~i = 0; i < 7; i += 1) {
+        println(i);
+    }
 
-    println(x[0 to unt]);
-
-    let z = x.pop().grab();
+    let z = 1;
     println(z);
-
-    x.push(1);
-    x.push(2);
-    x.push(3);
-    x.push(4);
-    x.push(5);
-
-    x.pop();
-
-    println(x.len());
-    println(x);
-
-    let ~num = 1;
-    num += 1;
-    println(num);
-    num -= 1;
-    println(num);
-
-    let nnn : Opt[int] = Some(10);
-    println(nnn.grab());
-    println(SOMEV.grab());
-    let panic_for_me_like_a_good_boy : Opt[str] = None;
-    // println(panic_for_me_like_a_good_boy.grab());
-    //println(NONEV.grab());
 }

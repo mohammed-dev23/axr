@@ -1,0 +1,69 @@
+use super::*;
+
+impl Parser {
+    pub fn parse_variable(&mut self, error_message: &str, scanner: &mut Scanner) -> u8 {
+        let is_mut = self.match_consume(&TokenType::Tilde, scanner);
+        self.consume(TokenType::Identifier, error_message, scanner);
+
+        self.declare_variable();
+        if self.compiler.scope_depth > 0 {
+            let idx = self.compiler.local_count as usize - 1;
+            self.compiler.locals[idx].is_mut = is_mut;
+            return 0;
+        }
+
+        let token = self.previous.clone();
+        self.identifier_constant(&token)
+    }
+
+    pub fn parse_const(&mut self, error_message: &str, scanner: &mut Scanner) -> String {
+        self.consume(TokenType::Identifier, error_message, scanner);
+        self.previous.start.clone()
+    }
+
+    pub fn define_variable(&mut self) {
+        self.mark_initialized();
+    }
+
+    pub fn define_const(&mut self, name: String, value: Value, type_tag: &Wrappers) {
+        self.const_table.insert(name, (value, *type_tag));
+    }
+
+    pub fn casting(&mut self, scanner: &mut Scanner) {
+        let type_tag = self
+            .type_tag
+            .pop()
+            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+
+        self.advance(scanner);
+        let token = self.previous.token_type;
+
+        let target = match token {
+            TokenType::Int => Wrappers::None(Id(TypeId::Int)),
+            TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
+            TokenType::Float => Wrappers::None(Id(TypeId::Float)),
+            TokenType::Str => Wrappers::None(Id(TypeId::Str)),
+            TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
+            TokenType::Char => Wrappers::None(Id(TypeId::Char)),
+            _ => Wrappers::None(Id(TypeId::Void)),
+        };
+
+        match (type_tag, target) {
+            (Wrappers::None(Id(TypeId::Str)), _) => {
+                self.error(&format!("non-primitive cast: `str` to `{}`", target));
+            }
+            (Wrappers::None(Id(TypeId::Char)), _) => {
+                self.error(&format!("non-primitive cast: `char` to `{}`", target));
+            }
+            (Wrappers::None(Id(TypeId::Bool)), _) => {
+                self.error(&format!("non-primitive cast: `bool` to `{}`", target));
+            }
+            _ => {}
+        }
+
+        self.emit_byte(OpCode::Cast as u8);
+        self.emit_byte(target.as_bytes());
+
+        self.type_tag.push(target);
+    }
+}
