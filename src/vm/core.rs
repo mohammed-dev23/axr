@@ -3,9 +3,11 @@ use super::*;
 impl Vm {
     pub fn new() -> Self {
         Self {
-            chunk: Chunk::new(),
-            ip: 0,
             stack: Vec::new(),
+            frames: Frame {
+                frames: Vec::new(),
+                frame_count: 0,
+            },
         }
     }
 
@@ -13,12 +15,19 @@ impl Vm {
         let mut chunk = Chunk::new();
         let mut compiler = compiler::Parser::new();
 
-        if !compiler.compile(source, &mut chunk) {
-            return InterpretResult::CompileError;
-        }
+        let function = match compiler.compile(source, &mut chunk) {
+            Some(x) => x,
+            None => return InterpretResult::CompileError,
+        };
 
-        self.chunk = chunk;
-        self.ip = 0;
+        self.stack.push(Value::Function(Arc::new(function.clone())));
+
+        self.frames.frames.push(CallFrame {
+            function: function.clone(),
+            ip: 0,
+            slots: 0,
+        });
+        self.frames.frame_count += 1;
 
         self.run()
     }
@@ -28,7 +37,12 @@ impl Vm {
             #[cfg(feature = "DTE")]
             {
                 use crate::debug::disassemble_instruction;
-                disassemble_instruction(&self.chunk, self.ip as usize);
+                disassemble_instruction(
+                    &self.frames.frames[self.frames.frame_count - 1]
+                        .function
+                        .chunk,
+                    self.frames.frames[self.frames.frame_count - 1].ip,
+                );
 
                 println!();
                 for i in &self.stack {
@@ -63,8 +77,9 @@ impl Vm {
     }
 
     pub fn read_byte(&mut self) -> u8 {
-        let byte = self.chunk.code[self.ip as usize];
-        self.ip += 1;
+        let frame = &mut self.frames.frames[self.frames.frame_count - 1];
+        let byte = frame.function.chunk.code[frame.ip];
+        frame.ip += 1;
         byte
     }
 
@@ -80,7 +95,8 @@ impl Vm {
 
     pub fn read_constant(&mut self) -> Value {
         let index = self.read_byte() as usize;
-        self.chunk.constants.values[index].clone()
+        let frame = &mut self.frames.frames[self.frames.frame_count - 1];
+        frame.function.chunk.constants.values[index].clone()
     }
 
     pub fn op<T, R, A>(op: char, v1: T, v2: R) -> Result<A>
@@ -128,10 +144,11 @@ impl Vm {
     }
 
     pub fn runtime_err(&mut self, message: &str) -> InterpretResult {
+        let frame = &mut self.frames.frames[self.frames.frame_count - 1];
         eprintln!("{}", message);
 
-        let instruction = self.ip - 1;
-        let line = self.chunk.line[instruction as usize];
+        let instruction = frame.ip;
+        let line = frame.function.chunk.line[instruction as usize];
         eprintln!("[line {}] in code", line);
 
         InterpretResult::RuntimeError

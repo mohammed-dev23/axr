@@ -55,6 +55,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::Input as u8 => simple_instruction("Input", offset),
         x if x == OpCode::Cast as u8 => simple_instruction("Cast", offset),
         x if x == OpCode::Loop as u8 => jump_instruction(chunk, "Loop", -1, offset),
+        x if x == OpCode::Println as u8 => simple_instruction("Println", offset),
         _ => simple_instruction("Unknown opcode", offset),
     }
 }

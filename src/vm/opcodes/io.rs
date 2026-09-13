@@ -13,19 +13,19 @@ impl Vm {
         let input = input.trim();
 
         let value = match expected_type {
-            t if t == Id(TypeId::Int).as_bytes() => {
-                Int(input.parse::<i64>().unwrap_or_else(|_| {
-                    self.runtime_err(&format!("Expected int found {}", input));
-                    0
-                }))
-            }
+            t if t == Id(TypeId::Int).as_bytes() => Int(input
+                .parse::<i64>()
+                .ok()
+                .ok_or_else(|| self.runtime_err(&format!("Expected int found {}", input)))
+                .unwrap()),
             t if t == Id(TypeId::Str).as_bytes() => Str(Arc::from(input)),
-            t if t == Id(TypeId::Float).as_bytes() => {
-                Value::Float(input.parse::<f64>().unwrap_or_else(|_| {
-                    self.runtime_err(&format!("Expected float found {}", input));
-                    return 0.0;
-                }))
-            }
+            t if t == Id(TypeId::Float).as_bytes() => Value::Float(
+                input
+                    .parse::<f64>()
+                    .ok()
+                    .ok_or_else(|| self.runtime_err(&format!("Expected float found {}", input)))
+                    .unwrap(),
+            ),
             t if t == Id(TypeId::Char).as_bytes() => {
                 let into_char: Vec<char> = input.chars().collect();
                 let c: Value;
@@ -41,12 +41,11 @@ impl Vm {
 
                 c
             }
-            t if t == Id(TypeId::Unt).as_bytes() => {
-                Unt(input.parse::<u64>().unwrap_or_else(|_| {
-                    self.runtime_err(&format!("Expected unt found {}", input));
-                    return 0;
-                }))
-            }
+            t if t == Id(TypeId::Unt).as_bytes() => Unt(input
+                .parse::<u64>()
+                .ok()
+                .ok_or_else(|| self.runtime_err(&format!("Expected unt found {}", input)))
+                .unwrap()),
             _ => Void,
         };
 

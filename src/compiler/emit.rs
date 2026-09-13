@@ -27,7 +27,7 @@ impl Parser {
         constant
     }
 
-    pub fn end_compiler(&mut self) {
+    pub fn end_compiler(&mut self) -> Function {
         #[cfg(feature = "DPC")]
         {
             use crate::debug::disassemble_chunk;
@@ -37,6 +37,8 @@ impl Parser {
         }
         self.emit_byte(OpCode::Return as u8);
         self.emit_return();
+
+        self.compiler.function.function.clone()
     }
 
     pub fn emit_return(&mut self) {
@@ -61,14 +63,14 @@ impl Parser {
             self.error("Too much code to jump over.");
         }
 
-        self.compiling_chunk.code[offset as usize] = ((jump >> 8) & 0xff) as u8;
-        self.compiling_chunk.code[(offset + 1) as usize] = (jump & 0xff) as u8;
+        self.current_chunk().code[offset as usize] = ((jump >> 8) & 0xff) as u8;
+        self.current_chunk().code[(offset + 1) as usize] = (jump & 0xff) as u8;
     }
 
     pub fn emit_loop(&mut self, loop_start: usize) {
         self.emit_byte(OpCode::Loop as u8);
 
-        let offset = self.compiling_chunk.code.len() - loop_start + 2;
+        let offset = self.current_chunk().code.len() - loop_start + 2;
 
         if offset > u16::MAX as usize {
             self.error("Loop body too large.");
@@ -78,7 +80,7 @@ impl Parser {
         self.emit_byte((offset & 0xff) as u8);
     }
 
-    fn current_chunk(&mut self) -> &mut Chunk {
-        &mut self.compiling_chunk
+    pub fn current_chunk(&mut self) -> &mut Chunk {
+        &mut self.compiler.function.function.chunk
     }
 }

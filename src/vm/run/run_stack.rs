@@ -30,13 +30,15 @@ impl Vm {
             }
             x if x == OpCode::GetLocal as u8 => {
                 let slot = self.read_byte();
-                let value = self.stack[slot as usize].clone();
+                let base = self.frames.frames[self.frames.frame_count - 1].slots;
+                let value = self.stack[base + slot as usize].clone();
                 self.stack.push(value);
                 InterpretResult::Ok
             }
             x if x == OpCode::SetLocal as u8 => {
                 let slot = self.read_byte();
-                self.stack[slot as usize] = self.peek();
+                let base = self.frames.frames[self.frames.frame_count - 1].slots;
+                self.stack[base + slot as usize] = self.peek();
                 InterpretResult::Ok
             }
             x if x == OpCode::Pop as u8 => {

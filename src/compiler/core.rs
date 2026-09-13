@@ -1,10 +1,10 @@
 use super::*;
 
 impl Parser {
-    pub fn compile(&mut self, source: String, chunk: &mut Chunk) -> bool {
+    pub fn compile(&mut self, source: String, chunk: &mut Chunk) -> Option<Function> {
         let mut scanner = Scanner::new(&source);
 
-        self.compiling_chunk = chunk.clone();
+        self.compiler.function.function.chunk = chunk.clone();
         self.had_err = false;
         self.painc_mode = false;
 
@@ -14,9 +14,10 @@ impl Parser {
             self.declaration(&mut scanner);
         }
 
-        self.end_compiler();
-        *chunk = self.compiling_chunk.clone();
-        !self.had_err
+        let function = self.end_compiler();
+        *chunk = self.current_chunk().clone();
+
+        if self.had_err { None } else { Some(function) }
     }
 
     pub fn advance(&mut self, scanner: &mut Scanner) {

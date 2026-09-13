@@ -15,7 +15,7 @@ use crate::{
         Wrappers,
     },
     value::{
-        OptWrapper,
+        Function, OptWrapper,
         Value::{self, Array, Char, Int, Str, Unt, Void},
     },
     vm::InterpretResult::RuntimeError,
@@ -47,9 +47,13 @@ mod run {
 pub const ERR_POP_MES: &str = "VM stack underflow — compiler emitted unbalanced bytecode";
 
 pub struct Vm {
-    chunk: Chunk,
-    ip: usize,
     stack: Vec<Value>,
+    frames: Frame,
+}
+
+pub struct Frame {
+    pub frames: Vec<CallFrame>,
+    pub frame_count: usize,
 }
 
 #[allow(warnings)]
@@ -63,3 +67,9 @@ pub enum InterpretResult {
 }
 
 pub type Result<T> = std::result::Result<T, InterpretResult>;
+
+pub struct CallFrame {
+    function: Function,
+    ip: usize,
+    slots: usize,
+}

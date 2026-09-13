@@ -12,7 +12,7 @@ use crate::{
     chunk::{Chunk, OpCode},
     compiler::{locals::Local, rules::Precedence},
     scanner::{Scanner, Token, TokenType},
-    value::Value,
+    value::{Function, Value},
 };
 
 pub const TYPETAG_ERR: &str = "VM stack underflow — compiler emitted unbalanced bytecode";
@@ -26,7 +26,6 @@ pub struct Parser {
     pub(in crate::compiler) previous: Token,
     pub(in crate::compiler) had_err: bool,
     pub(in crate::compiler) painc_mode: bool,
-    pub(in crate::compiler) compiling_chunk: Chunk,
     pub(in crate::compiler) compiler: Compiler,
     pub(in crate::compiler) const_table: HashMap<String, (Value, Wrappers)>,
     pub(in crate::compiler) type_tag: Vec<Wrappers>,
@@ -39,6 +38,19 @@ pub struct Compiler {
     pub(in crate::compiler) locals: Vec<Local>,
     pub(in crate::compiler) local_count: i32,
     pub(in crate::compiler) scope_depth: i32,
+    pub(in crate::compiler) function: Functions,
+}
+
+#[allow(warnings)]
+pub struct Functions {
+    function: Function,
+    function_type: FunctionType,
+}
+
+#[allow(warnings)]
+pub enum FunctionType {
+    Function,
+    Script,
 }
 
 pub struct ControlFlow {
@@ -78,11 +90,25 @@ pub enum TypeId {
 }
 
 impl Compiler {
-    pub fn new() -> Self {
+    pub fn new(function_type: FunctionType) -> Self {
+        let local = vec![Local {
+            name: Token {
+                start: "".to_string(),
+                ..Default::default()
+            },
+            depth: 0,
+            is_mut: false,
+            type_tag: Wrappers::None(Id(Void)),
+        }];
+
         Self {
-            locals: Vec::new(),
-            local_count: 0,
+            locals: local,
+            local_count: 1,
             scope_depth: 0,
+            function: Functions {
+                function: Function::new(),
+                function_type: function_type,
+            },
         }
     }
 }
@@ -94,8 +120,7 @@ impl Parser {
             previous: Token::default(),
             had_err: false,
             painc_mode: false,
-            compiling_chunk: Chunk::new(),
-            compiler: Compiler::new(),
+            compiler: Compiler::new(FunctionType::Script),
             const_table: HashMap::new(),
             type_tag: Vec::new(),
             expected_type: None,

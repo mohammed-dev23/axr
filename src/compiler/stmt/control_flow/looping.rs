@@ -4,7 +4,7 @@ use super::super::*;
 
 impl Parser {
     pub fn while_stmt(&mut self, scanner: &mut Scanner) {
-        let loop_start = self.compiling_chunk.code.len();
+        let loop_start = self.current_chunk().code.len();
         self.control_flow.loop_starts.push(loop_start);
         self.control_flow.stops.push(Vec::new());
 
@@ -25,7 +25,7 @@ impl Parser {
     }
 
     pub fn loop_stmt(&mut self, scanner: &mut Scanner) {
-        let loop_start = self.compiling_chunk.code.len();
+        let loop_start = self.current_chunk().code.len();
         self.control_flow.loop_starts.push(loop_start);
         self.control_flow.stops.push(Vec::new());
         self.control_flow.locals_in.push(self.compiler.local_count);
@@ -57,7 +57,7 @@ impl Parser {
         // we do not cont the var dec with the code len
         // so we start the mausrement after the dec
 
-        let loop_start = self.compiling_chunk.code.len();
+        let loop_start = self.current_chunk().code.len();
 
         // the expresion
         self.expression(scanner);
@@ -75,7 +75,7 @@ impl Parser {
         let body_jump = self.emit_jump(OpCode::Jump as usize);
         // it's like uncondtionl jump over the fisrt increment so it works like
         // condtion -> body , instead of condtion -> increment -> body so now 0 for example == 1 instead of 0
-        let increment_start = self.compiling_chunk.code.len();
+        let increment_start = self.current_chunk().code.len();
         // we meausere the increment start so we could in the next loop jump to the increment not the body again!
         self.expression(scanner);
         self.emit_byte(OpCode::Pop as u8);

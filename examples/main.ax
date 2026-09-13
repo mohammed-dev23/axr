@@ -1,8 +1,3 @@
 fn main() {
-    for (let ~i = 0; i < 7; i += 1) {
-        println(i);
-    }
-
-    let z = 1;
-    println(z);
+    println("test");
 }

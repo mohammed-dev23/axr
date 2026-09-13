@@ -4,7 +4,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::value::Value::{Array, Bool, Char, Float, Int, Opt, Str, Unt};
+use crate::{
+    chunk::Chunk,
+    value::Value::{Array, Bool, Char, Float, Int, Str, Unt},
+};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -16,6 +19,7 @@ pub enum Value {
     Unt(u64),
     Array(Arc<Mutex<Vec<Value>>>),
     Opt(OptWrapper),
+    Function(Arc<Function>),
     Void,
 }
 
@@ -23,6 +27,24 @@ pub enum Value {
 pub enum OptWrapper {
     Some(Box<Value>),
     None,
+}
+
+#[derive(Debug, Clone)]
+#[allow(warnings)]
+pub struct Function {
+    pub arity: usize,
+    pub chunk: Chunk,
+    pub name: String,
+}
+
+impl Function {
+    pub fn new() -> Self {
+        Self {
+            arity: 0,
+            chunk: Chunk::new(),
+            name: String::new(),
+        }
+    }
 }
 
 #[allow(warnings)]
@@ -58,6 +80,13 @@ impl Value {
     pub fn is_array(&self) -> bool {
         match self {
             Array(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_fn(&self) -> bool {
+        match self {
+            Self::Function(_) => true,
             _ => false,
         }
     }
@@ -120,6 +149,13 @@ impl Value {
             _ => OptWrapper::None,
         }
     }
+
+    pub fn as_fn(self) -> Option<Arc<Function>> {
+        match self {
+            Self::Function(x) => Some(x),
+            _ => None,
+        }
+    }
 }
 
 impl Value {
@@ -171,6 +207,7 @@ impl fmt::Display for Value {
                 OptWrapper::Some(x) => write!(f, "{}", x),
                 OptWrapper::None => write!(f, "None"),
             },
+            Value::Function(x) => write!(f, "{:?}", x),
             Value::Void => write!(f, "Void"),
         }
     }
@@ -183,13 +220,7 @@ impl Neg for Value {
         match self {
             Self::Float(x) => Self::Float(-x),
             Self::Int(x) => Self::Int(-x),
-            Self::Bool(x) => Bool(x),
-            Self::Str(x) => Str(x),
-            Self::Char(x) => Char(x),
-            Self::Unt(x) => Unt(x),
-            Self::Array(x) => Array(x),
-            Self::Opt(x) => Opt(x),
-            Self::Void => Self::Void,
+            _ => Self::Void,
         }
     }
 }
