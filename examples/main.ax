@@ -5,4 +5,12 @@ fn main() {
             println(z);
         }
     }
+
+    just_print();
 }
+
+fn just_print() {
+    println("Done");
+}
+
+main();

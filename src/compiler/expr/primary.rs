@@ -23,7 +23,8 @@ impl Parser {
         }
 
         let Some((arg, is_mut, type_tag)) = self.resolve_local(name) else {
-            self.error("");
+            let slot = self.identifier_constant(name);
+            self.emit_bytes(OpCode::GetGlobal as u8, slot);
             return;
         };
 

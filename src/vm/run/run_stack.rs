@@ -5,7 +5,18 @@ use super::super::*;
 impl Vm {
     pub fn stack_run(&mut self, instructions: u8) -> InterpretResult {
         match instructions {
-            x if x == OpCode::Return as u8 => return InterpretResult::Done,
+            x if x == OpCode::Return as u8 => {
+                let result = self.stack.pop().expect(ERR_POP_MES);
+                self.frames.frame_count -= 1;
+
+                if self.frames.frame_count == 0 {
+                    self.stack.pop();
+                    return InterpretResult::Done;
+                }
+
+                self.stack.push(result);
+                InterpretResult::Ok
+            }
             x if x == OpCode::Constant as u8 => {
                 let constant = self.read_constant();
                 self.stack.push(constant);
@@ -45,6 +56,10 @@ impl Vm {
                 self.stack.pop().unwrap_or(Void);
                 InterpretResult::Ok
             }
+            x if x == OpCode::Call as u8 => self.op_call(),
+            x if x == OpCode::DefineGlobal as u8 => self.op_define_globals(),
+            x if x == OpCode::GetGlobal as u8 => self.op_get_global(),
+
             _ => NotHandled,
         }
     }

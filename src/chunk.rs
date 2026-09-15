@@ -51,6 +51,10 @@ pub enum OpCode {
     GetLocal,
     SetLocal,
 
+    //functions
+    DefineGlobal,
+    GetGlobal,
+
     //Control flow
     JumpIfFalse,
     Jump,
@@ -76,6 +80,7 @@ pub enum OpCode {
 
     //Other
     Cast,
+    Call,
     Void,
     Pop,
     AddAdd,

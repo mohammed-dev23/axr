@@ -8,6 +8,7 @@ impl Vm {
                 frames: Vec::new(),
                 frame_count: 0,
             },
+            global_table: HashMap::new(),
         }
     }
 
@@ -16,14 +17,14 @@ impl Vm {
         let mut compiler = compiler::Parser::new();
 
         let function = match compiler.compile(source, &mut chunk) {
-            Some(x) => x,
+            Some(x) => Arc::new(x),
             None => return InterpretResult::CompileError,
         };
 
-        self.stack.push(Value::Function(Arc::new(function.clone())));
+        self.stack.push(Value::Function(function.clone()));
 
         self.frames.frames.push(CallFrame {
-            function: function.clone(),
+            function: function,
             ip: 0,
             slots: 0,
         });
@@ -57,7 +58,7 @@ impl Vm {
                     match self.$handler(instruction) {
                         InterpretResult::NotHandled => {}
                         InterpretResult::RuntimeError => break RuntimeError,
-                        InterpretResult::Done => break InterpretResult::Done,
+                        InterpretResult::Done => break InterpretResult::Ok,
                         _ => continue,
                     }
                 };
@@ -91,6 +92,10 @@ impl Vm {
 
     pub fn peek(&mut self) -> Value {
         self.stack.last().unwrap_or(&Void).clone()
+    }
+
+    pub fn peek_spec(&mut self, des: usize) -> Value {
+        self.stack[self.stack.len() - des - 1].clone()
     }
 
     pub fn read_constant(&mut self) -> Value {

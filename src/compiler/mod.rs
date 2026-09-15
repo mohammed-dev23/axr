@@ -18,7 +18,6 @@ use crate::{
 pub const TYPETAG_ERR: &str = "VM stack underflow — compiler emitted unbalanced bytecode";
 
 use std::{collections::HashMap, fmt, sync::Arc};
-
 pub use {TypeId::Void, TypeTag::Array, TypeTag::Id};
 
 pub struct Parser {
@@ -27,6 +26,7 @@ pub struct Parser {
     pub(in crate::compiler) had_err: bool,
     pub(in crate::compiler) painc_mode: bool,
     pub(in crate::compiler) compiler: Compiler,
+    pub(in crate::compiler) compiler_stack: Vec<Compiler>,
     pub(in crate::compiler) const_table: HashMap<String, (Value, Wrappers)>,
     pub(in crate::compiler) type_tag: Vec<Wrappers>,
     pub(in crate::compiler) expected_type: Option<Wrappers>,
@@ -121,6 +121,7 @@ impl Parser {
             had_err: false,
             painc_mode: false,
             compiler: Compiler::new(FunctionType::Script),
+            compiler_stack: Vec::new(),
             const_table: HashMap::new(),
             type_tag: Vec::new(),
             expected_type: None,

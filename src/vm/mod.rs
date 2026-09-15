@@ -1,7 +1,7 @@
 use std::{
+    collections::HashMap,
     io::{Write, stdin, stdout},
-    sync::Arc,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 use crate::{
@@ -44,11 +44,14 @@ mod run {
     mod run_wrappers;
 }
 
+mod function;
+
 pub const ERR_POP_MES: &str = "VM stack underflow — compiler emitted unbalanced bytecode";
 
 pub struct Vm {
     stack: Vec<Value>,
     frames: Frame,
+    global_table: HashMap<Arc<str>, Value>,
 }
 
 pub struct Frame {
@@ -69,7 +72,7 @@ pub enum InterpretResult {
 pub type Result<T> = std::result::Result<T, InterpretResult>;
 
 pub struct CallFrame {
-    function: Function,
+    function: Arc<Function>,
     ip: usize,
     slots: usize,
 }

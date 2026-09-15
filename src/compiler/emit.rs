@@ -35,9 +35,8 @@ impl Parser {
                 disassemble_chunk(self.current_chunk());
             }
         }
-        self.emit_byte(OpCode::Return as u8);
-        self.emit_return();
 
+        self.emit_return();
         self.compiler.function.function.clone()
     }
 

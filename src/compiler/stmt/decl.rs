@@ -10,13 +10,23 @@ impl Parser {
     }
 
     pub fn fn_declaration(&mut self, scanner: &mut Scanner) {
-        self.consume(TokenType::Identifier, "Expect name after fn.", scanner);
-        self.consume(TokenType::LeftParen, "Expect '(' after fn name.", scanner);
-        self.consume(TokenType::RigtParen, "Enclosed ')' expected.", scanner);
-        self.consume(TokenType::LeftBrace, "Expect '{' after fn name.", scanner);
-        self.begin_scope();
-        self.block(scanner);
-        self.end_scope();
+        self.consume(TokenType::Identifier, "Expect a functions name", scanner);
+        let function_name = self.previous.start.clone();
+
+        let global_slot = if self.compiler.scope_depth == 0 {
+            self.declare_variable();
+            Some(self.identifier_constant(&self.previous.clone()))
+        } else {
+            self.declare_variable();
+            self.mark_initialized();
+            None
+        };
+
+        self.function(FunctionType::Function, scanner, &function_name);
+
+        if let Some(x) = global_slot {
+            self.emit_bytes(OpCode::DefineGlobal as u8, x);
+        }
     }
 
     pub fn variable_declaration(&mut self, scanner: &mut Scanner) {

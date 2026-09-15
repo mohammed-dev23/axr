@@ -60,6 +60,10 @@ impl Parser {
     }
 
     pub fn mark_initialized(&mut self) {
+        if self.compiler.scope_depth == 0 {
+            return;
+        }
+
         self.compiler.locals[self.compiler.local_count as usize - 1].depth =
             self.compiler.scope_depth;
     }
