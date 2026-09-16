@@ -4,6 +4,7 @@ pub mod emit;
 pub mod expr;
 pub mod locals;
 pub mod methode;
+pub mod prepass;
 pub mod rules;
 pub mod stmt;
 mod type_safety;
@@ -15,14 +16,15 @@ use crate::{
     value::{Function, Value},
 };
 
-pub const TYPETAG_ERR: &str = "VM stack underflow — compiler emitted unbalanced bytecode";
+pub const TYPETAG_ERR: &str = "TypeTag stack underflow — compiler emitted unbalanced typetags";
 
-use std::{collections::HashMap, fmt, sync::Arc};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc, sync::Arc};
 pub use {TypeId::Void, TypeTag::Array, TypeTag::Id};
 
 pub struct Parser {
     pub(in crate::compiler) current: Token,
     pub(in crate::compiler) previous: Token,
+    pub(in crate::compiler) prevprev: Token,
     pub(in crate::compiler) had_err: bool,
     pub(in crate::compiler) painc_mode: bool,
     pub(in crate::compiler) compiler: Compiler,
@@ -31,6 +33,7 @@ pub struct Parser {
     pub(in crate::compiler) type_tag: Vec<Wrappers>,
     pub(in crate::compiler) expected_type: Option<Wrappers>,
     pub(in crate::compiler) control_flow: ControlFlow,
+    pub(in crate::compiler) parameters: Parameters,
     pub(in crate::compiler) info: Info,
 }
 
@@ -45,6 +48,10 @@ pub struct Compiler {
 pub struct Functions {
     function: Function,
     function_type: FunctionType,
+}
+
+pub struct Parameters {
+    type_tag_table: HashMap<String, Rc<RefCell<Vec<Wrappers>>>>,
 }
 
 #[allow(warnings)]
@@ -118,6 +125,7 @@ impl Parser {
         Self {
             current: Token::default(),
             previous: Token::default(),
+            prevprev: Token::default(),
             had_err: false,
             painc_mode: false,
             compiler: Compiler::new(FunctionType::Script),
@@ -133,6 +141,9 @@ impl Parser {
             info: Info {
                 is_mut: Vec::new(),
                 last_local_slot: Some(0),
+            },
+            parameters: Parameters {
+                type_tag_table: HashMap::new(),
             },
         }
     }

@@ -6,11 +6,14 @@ fn main() {
         }
     }
 
-    just_print();
+    let some = "Done";
+    just_print(some , i , 67 to unt);
 }
 
-fn just_print() {
-    println("Done");
+fn just_print(some : str , another : int , and_another_one : unt) {
+    println(some);
+    println(another);
+    println(and_another_one);
 }
 
 main();

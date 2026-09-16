@@ -36,9 +36,16 @@ impl Parser {
                     self.error_at_current("Can't have more than 255 parameters");
                 }
 
-                self.consume(TokenType::Identifier, "Expect parameters name.", scanner);
-                self.variable_declaration(scanner);
-                self.mark_initialized();
+                self.parse_variable("Expect a parameter's name", scanner);
+                self.define_variable();
+
+                self.consume(
+                    TokenType::Colon,
+                    "Expect ':' after paramters, and a type",
+                    scanner,
+                );
+
+                self.advance(scanner);
 
                 if !self.match_consume(&TokenType::Comma, scanner) {
                     break;
@@ -77,16 +84,35 @@ impl Parser {
 
     pub fn argument_list(&mut self, scanner: &mut Scanner) -> usize {
         let mut arg_count = 0;
+        let functions_name = &self.prevprev.start;
+        let table = self.parameters.type_tag_table.clone();
+
+        let stack = table
+            .get(functions_name)
+            .expect("Expected function found nothing.")
+            .borrow_mut();
 
         loop {
             if !self.check(&RigtParen) {
                 self.expression(scanner);
+
+                let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
+
+                let expected_type_tag = stack.get(arg_count).expect(TYPETAG_ERR);
+
+                if &type_tag != expected_type_tag {
+                    self.error(&format!(
+                        "Mismatched types expected [{}] found [{}]",
+                        expected_type_tag, type_tag
+                    ));
+                }
 
                 if arg_count == 255 {
                     self.error("Can't have more than 255 arguments.");
                 }
 
                 arg_count += 1;
+                self.type_tag.push(type_tag);
                 if !self.match_consume(&TokenType::Comma, scanner) {
                     break;
                 }

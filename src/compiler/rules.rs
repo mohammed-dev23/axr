@@ -241,6 +241,8 @@ impl Parser {
         }
 
         while precedence <= Self::get_rule(self.current.token_type).precedence {
+            self.prevprev = self.previous.clone();
+
             self.advance(scanner);
             let infix_rule = Self::get_rule(self.previous.token_type).infix.unwrap();
             infix_rule(self, scanner);

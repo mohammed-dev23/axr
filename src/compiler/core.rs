@@ -4,6 +4,8 @@ impl Parser {
     pub fn compile(&mut self, source: String, chunk: &mut Chunk) -> Option<Function> {
         let mut scanner = Scanner::new(&source);
 
+        self.pre_pass(&source);
+
         self.compiler.function.function.chunk = chunk.clone();
         self.had_err = false;
         self.painc_mode = false;
