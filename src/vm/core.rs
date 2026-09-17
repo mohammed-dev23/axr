@@ -30,7 +30,27 @@ impl Vm {
         });
         self.frames.frame_count += 1;
 
-        self.run()
+        let res = self.run();
+
+        if res != InterpretResult::Ok {
+            return res;
+        }
+
+        match self.global_table.get(&Arc::from("main")) {
+            Some(x) => {
+                self.stack.push(x.clone());
+                self.call_value(x.clone(), 0);
+
+                let res = self.run();
+
+                if res != InterpretResult::Ok {
+                    return res;
+                }
+            }
+            None => return self.runtime_err("Expected main entry point"),
+        };
+
+        InterpretResult::Ok
     }
 
     fn run(&mut self) -> InterpretResult {

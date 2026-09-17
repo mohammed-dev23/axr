@@ -8,6 +8,7 @@ impl Vm {
             x if x == OpCode::Return as u8 => {
                 let result = self.stack.pop().expect(ERR_POP_MES);
                 self.frames.frame_count -= 1;
+                self.frames.frames.pop();
 
                 if self.frames.frame_count == 0 {
                     self.stack.pop();

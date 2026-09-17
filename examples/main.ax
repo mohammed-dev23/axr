@@ -15,5 +15,3 @@ fn just_print(some : str , another : int , and_another_one : unt) {
     println(another);
     println(and_another_one);
 }
-
-main();
