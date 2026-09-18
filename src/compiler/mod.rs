@@ -33,7 +33,7 @@ pub struct Parser {
     pub(in crate::compiler) type_tag: Vec<Wrappers>,
     pub(in crate::compiler) expected_type: Option<Wrappers>,
     pub(in crate::compiler) control_flow: ControlFlow,
-    pub(in crate::compiler) parameters: Parameters,
+    pub(in crate::compiler) function_info: FunctionInfo,
     pub(in crate::compiler) info: Info,
 }
 
@@ -42,19 +42,21 @@ pub struct Compiler {
     pub(in crate::compiler) local_count: i32,
     pub(in crate::compiler) scope_depth: i32,
     pub(in crate::compiler) function: Functions,
+    pub(in crate::compiler) has_returned: bool,
 }
 
-#[allow(warnings)]
 pub struct Functions {
     function: Function,
+    #[allow(warnings)]
     function_type: FunctionType,
 }
 
-pub struct Parameters {
-    type_tag_table: HashMap<String, Rc<RefCell<Vec<Wrappers>>>>,
+pub struct FunctionInfo {
+    parameters_type_tag_table: HashMap<String, Rc<RefCell<Vec<Wrappers>>>>,
+    return_type_tag_table: HashMap<String, Wrappers>,
 }
 
-#[allow(warnings)]
+#[derive(PartialEq, Eq)]
 pub enum FunctionType {
     Function,
     Script,
@@ -116,6 +118,7 @@ impl Compiler {
                 function: Function::new(),
                 function_type: function_type,
             },
+            has_returned: false,
         }
     }
 }
@@ -142,8 +145,9 @@ impl Parser {
                 is_mut: Vec::new(),
                 last_local_slot: Some(0),
             },
-            parameters: Parameters {
-                type_tag_table: HashMap::new(),
+            function_info: FunctionInfo {
+                parameters_type_tag_table: HashMap::new(),
+                return_type_tag_table: HashMap::new(),
             },
         }
     }

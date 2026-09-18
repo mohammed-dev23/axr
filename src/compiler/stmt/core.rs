@@ -59,6 +59,10 @@ impl Parser {
                 self.match_consume(&token, scanner);
                 self.for_stmt(scanner);
             }
+            TokenType::Return => {
+                self.match_consume(&token, scanner);
+                self.return_stmt(scanner);
+            }
             _ => self.expression_statement(scanner),
         }
     }

@@ -47,6 +47,64 @@ impl Parser {
 
                 self.advance(scanner);
 
+                let annotation_type = self.previous.token_type;
+
+                let array = if annotation_type == TokenType::Array {
+                    self.consume(TokenType::LeftBracket, "Exp", scanner);
+
+                    let array = match self.current.token_type {
+                        TokenType::Int => Wrappers::None(TypeTag::Array(TypeId::Int)),
+                        TokenType::Unt => Wrappers::None(TypeTag::Array(TypeId::Unt)),
+                        TokenType::Float => Wrappers::None(TypeTag::Array(TypeId::Float)),
+                        TokenType::Str => Wrappers::None(TypeTag::Array(TypeId::Str)),
+                        TokenType::Bool => Wrappers::None(TypeTag::Array(TypeId::Bool)),
+                        TokenType::Char => Wrappers::None(TypeTag::Array(TypeId::Char)),
+                        _ => Wrappers::None(TypeTag::Array(TypeId::Void)),
+                    };
+
+                    self.advance(scanner);
+                    self.consume(TokenType::RightBracket, "Exp", scanner);
+                    array
+                } else {
+                    Wrappers::None(Array(Void))
+                };
+
+                let opt = if annotation_type == TokenType::Opt {
+                    self.consume(TokenType::LeftBracket, "Exp", scanner);
+
+                    let opt = match self.current.token_type {
+                        TokenType::Int => Wrappers::Opt(TypeTag::Id(TypeId::Int)),
+                        TokenType::Unt => Wrappers::Opt(TypeTag::Id(TypeId::Unt)),
+                        TokenType::Float => Wrappers::Opt(TypeTag::Id(TypeId::Float)),
+                        TokenType::Str => Wrappers::Opt(TypeTag::Id(TypeId::Str)),
+                        TokenType::Bool => Wrappers::Opt(TypeTag::Id(TypeId::Bool)),
+                        TokenType::Char => Wrappers::Opt(TypeTag::Id(TypeId::Char)),
+                        TokenType::Array => Wrappers::Opt(array.extract()),
+                        _ => Wrappers::None(TypeTag::Id(TypeId::Void)),
+                    };
+
+                    self.advance(scanner);
+                    self.consume(TokenType::RightBracket, "Exp", scanner);
+                    opt
+                } else {
+                    Wrappers::Opt(Id(Void))
+                };
+
+                let expected_type = match annotation_type {
+                    TokenType::Int => Wrappers::None(Id(TypeId::Int)),
+                    TokenType::Str => Wrappers::None(Id(TypeId::Str)),
+                    TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
+                    TokenType::Float => Wrappers::None(Id(TypeId::Float)),
+                    TokenType::Char => Wrappers::None(Id(TypeId::Char)),
+                    TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
+                    TokenType::Array => array,
+                    TokenType::Opt => opt,
+                    _ => Wrappers::None(Id(TypeId::Void)),
+                };
+
+                self.compiler.locals[(self.compiler.local_count - 1) as usize].type_tag =
+                    expected_type;
+
                 if !self.match_consume(&TokenType::Comma, scanner) {
                     break;
                 }
@@ -58,6 +116,10 @@ impl Parser {
             "Expect ')' after parameters.",
             scanner,
         );
+
+        if self.match_consume(&TokenType::Arrow, scanner) {
+            self.advance(scanner);
+        }
 
         self.consume(
             TokenType::LeftBrace,
@@ -78,14 +140,25 @@ impl Parser {
     }
 
     pub fn call(&mut self, scanner: &mut Scanner) {
+        let expected_return_type = match self
+            .function_info
+            .return_type_tag_table
+            .get(&self.prevprev.start)
+            .cloned()
+        {
+            Some(x) => x,
+            None => return self.error("Function must return value!."),
+        };
+
         let arg_count = self.argument_list(scanner);
+        self.type_tag.push(expected_return_type);
         self.emit_bytes(OpCode::Call as u8, arg_count as u8);
     }
 
     pub fn argument_list(&mut self, scanner: &mut Scanner) -> usize {
         let mut arg_count = 0;
         let functions_name = &self.prevprev.start;
-        let table = self.parameters.type_tag_table.clone();
+        let table = self.function_info.parameters_type_tag_table.clone();
 
         let stack = table
             .get(functions_name)
@@ -112,7 +185,6 @@ impl Parser {
                 }
 
                 arg_count += 1;
-                self.type_tag.push(type_tag);
                 if !self.match_consume(&TokenType::Comma, scanner) {
                     break;
                 }

@@ -41,7 +41,18 @@ impl Parser {
     }
 
     pub fn emit_return(&mut self) {
-        self.emit_byte(OpCode::Return as u8);
+        if self.compiler.function.function_type == FunctionType::Script {
+            self.emit_byte(OpCode::Void as u8);
+            self.emit_byte(OpCode::Return as u8);
+            return;
+        }
+
+        if !self.compiler.has_returned {
+            self.error(&format!(
+                "Expected 'return' at the end of [{}] function",
+                &self.compiler.function.function.name
+            ));
+        }
     }
 
     pub fn identifier_constant(&mut self, name: &Token) -> u8 {

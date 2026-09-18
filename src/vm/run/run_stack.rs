@@ -15,6 +15,7 @@ impl Vm {
                     return InterpretResult::Done;
                 }
 
+                self.stack.pop();
                 self.stack.push(result);
                 InterpretResult::Ok
             }

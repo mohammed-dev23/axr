@@ -1,17 +1,14 @@
 fn main() {
-    for (let ~i = 0; i < 100; i += 1) {
-        for (let ~z = 100; z > 30; z -= 1) {
-            println(i);
-            println(z);
-        }
+    let ~count : int = 10;
+
+    while count > 0 {
+        println(count);
+        let ~wait : str = input("Press Enter for next tick...");
+        count -= 1;
     }
 
-    let some = "Done";
-    just_print(some , i , 67 to unt);
-}
+    println("Liftoff!");
 
-fn just_print(some : str , another : int , and_another_one : unt) {
-    println(some);
-    println(another);
-    println(and_another_one);
+
+    return;
 }

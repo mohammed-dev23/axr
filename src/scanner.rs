@@ -72,6 +72,8 @@ pub enum TokenType {
     Loop,
     Stop,
     Skip,
+    Return,
+    Arrow,
     Match,
     For,
     In,
@@ -133,6 +135,8 @@ impl<'s> Scanner<'s> {
             '-' => {
                 if self.match_tokens('=') {
                     self.make_token(TokenType::MinusMinus)
+                } else if self.match_tokens('>') {
+                    self.make_token(TokenType::Arrow)
                 } else {
                     self.make_token(TokenType::Minus)
                 }
@@ -337,7 +341,7 @@ impl<'s> Scanner<'s> {
             "let" => TokenType::Let,
             "true" => TokenType::True,
             "false" => TokenType::False,
-            "Void" => TokenType::Void,
+            "void" => TokenType::Void,
             "println" => TokenType::Println,
             "const" => TokenType::Const,
             "fn" => TokenType::Fn,
@@ -364,6 +368,7 @@ impl<'s> Scanner<'s> {
             "Opt" => TokenType::Opt,
             "Some" => TokenType::Some,
             "None" => TokenType::None,
+            "return" => TokenType::Return,
             _ => TokenType::Identifier,
         }
     }

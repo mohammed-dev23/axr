@@ -5,6 +5,7 @@ impl Parser {
         let mut scanner = Scanner::new(&source);
 
         self.pre_pass(&source);
+        self.check_main();
 
         self.compiler.function.function.chunk = chunk.clone();
         self.had_err = false;

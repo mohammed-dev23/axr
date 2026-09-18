@@ -169,12 +169,23 @@ impl Vm {
     }
 
     pub fn runtime_err(&mut self, message: &str) -> InterpretResult {
-        let frame = &mut self.frames.frames[self.frames.frame_count - 1];
-        eprintln!("{}", message);
+        for i in (0..self.frames.frame_count).rev() {
+            let frame = &mut self.frames.frames[i];
+            let function = &frame.function;
+            let instruction = frame.ip;
 
-        let instruction = frame.ip;
-        let line = frame.function.chunk.line[instruction as usize];
-        eprintln!("[line {}] in code", line);
+            if function.name == "" {
+                eprintln!(
+                    "[script] > [line {}] > [{}]",
+                    function.chunk.line[instruction], message
+                );
+            } else {
+                eprintln!(
+                    "[{}] > [line {}] > [{}]",
+                    function.name, function.chunk.line[instruction], message
+                );
+            }
+        }
 
         InterpretResult::RuntimeError
     }

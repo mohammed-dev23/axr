@@ -30,7 +30,7 @@ const NONE_RULE: ParseRule = ParseRule {
     infix: None,
 };
 
-static RULES: [ParseRule; 65] = [
+static RULES: [ParseRule; 67] = [
     ParseRule {
         prefix: Some(Parser::grouping),
         infix: Some(Parser::call),
@@ -178,6 +178,8 @@ static RULES: [ParseRule; 65] = [
     NONE_RULE, // Loop
     NONE_RULE, // Stop
     NONE_RULE, // Skip
+    NONE_RULE, // Return
+    NONE_RULE, // Arrow,
     NONE_RULE, // Match
     NONE_RULE, // For
     NONE_RULE, // In
