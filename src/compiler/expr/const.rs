@@ -1,7 +1,7 @@
 use super::*;
 
 impl Parser {
-    pub fn const_value(&mut self, scanner: &mut Scanner) -> (Value, Wrappers) {
+    pub fn const_value(&mut self, scanner: &mut Scanner) -> (Value, TypeTag) {
         self.advance(scanner);
 
         match &self.previous.token_type {
@@ -9,28 +9,26 @@ impl Parser {
                 let txt = &self.previous.start;
                 if txt.contains('.') {
                     let value = txt.parse::<f64>().unwrap_or(0.0);
-                    (Value::Float(value), Wrappers::None(Id(TypeId::Float)))
+                    (Value::Float(value), TypeTag::Float)
                 } else if self
                     .expected_type
-                    .is_some_and(|t| t == Wrappers::None(Id(TypeId::Unt)))
+                    .clone()
+                    .is_some_and(|t| t == TypeTag::Unt)
                 {
                     let value = txt.parse::<u64>().unwrap_or(0);
-                    (Value::Unt(value), Wrappers::None(Id(TypeId::Unt)))
+                    (Value::Unt(value), TypeTag::Unt)
                 } else {
                     let value = txt.parse::<i64>().unwrap_or(0);
-                    (Value::Int(value), Wrappers::None(Id(TypeId::Int)))
+                    (Value::Int(value), TypeTag::Int)
                 }
             }
             TokenType::String => {
                 let raw = &self.previous.start;
                 let trimmed = &raw[1..raw.len() - 1];
-                (
-                    Value::Str(Arc::from(trimmed)),
-                    Wrappers::None(Id(TypeId::Str)),
-                )
+                (Value::Str(Arc::from(trimmed)), TypeTag::Str)
             }
-            TokenType::True => (Value::Bool(true), Wrappers::None(Id(TypeId::Bool))),
-            TokenType::False => (Value::Bool(false), Wrappers::None(Id(TypeId::Bool))),
+            TokenType::True => (Value::Bool(true), TypeTag::Bool),
+            TokenType::False => (Value::Bool(false), TypeTag::Bool),
             TokenType::Char => {
                 let raw = &self.previous.start;
                 let trimmed = &raw[1..raw.len() - 1];
@@ -38,23 +36,22 @@ impl Parser {
 
                 if into_chars.len() != 1 {
                     self.error("Char type cannot contain more than one char.");
-                    return (Value::Void, Wrappers::None(Id(TypeId::Void)));
+                    return (Value::Void, TypeTag::Void);
                 }
 
-                (Value::Char(into_chars[0]), Wrappers::None(Id(TypeId::Char)))
+                (Value::Char(into_chars[0]), TypeTag::Char)
             }
             TokenType::LeftBracket => {
                 let mut values = Vec::new();
 
                 let (fvalue, ftype_tag) = self.const_value(scanner);
-                let ftype_tag = ftype_tag.as_typeid();
                 values.push(fvalue);
 
                 while self.current.token_type == TokenType::Comma {
                     self.match_consume(&TokenType::Comma, scanner);
                     let (value, typetag) = self.const_value(scanner);
 
-                    if ftype_tag != typetag.as_typeid() {
+                    if ftype_tag != typetag {
                         self.error("Arrays must contain the same type for all of its slots.");
                     }
 
@@ -63,7 +60,7 @@ impl Parser {
 
                 let expected_array_type = self.expected_type.take().unwrap_or_else(|| {
                     self.error("Array[Type] annotation needed.");
-                    Wrappers::None(TypeTag::Array(Void))
+                    TypeTag::Array(Arc::new(TypeTag::Void))
                 });
 
                 self.consume(
@@ -74,22 +71,22 @@ impl Parser {
 
                 (
                     Value::Array(Arc::new(Mutex::new(values))),
-                    Wrappers::None(TypeTag::Array(expected_array_type.as_typeid())),
+                    TypeTag::Array(Arc::new(expected_array_type)),
                 )
             }
 
-            TokenType::Void => (Value::Void, Wrappers::None(Id(TypeId::Void))),
+            TokenType::Void => (Value::Void, TypeTag::Void),
             TokenType::Some => {
                 let outer_expected = self.expected_type.take();
-                self.expected_type = outer_expected.map(|w| Wrappers::None(w.extract()));
+                self.expected_type = outer_expected.clone().map(|w| w.extract().as_ref().clone());
 
                 self.consume(TokenType::LeftParen, "Expect '(' after Some", scanner);
                 let (value, inner_type) = self.const_value(scanner);
                 self.consume(TokenType::RigtParen, "Enclosed '(' expect ')'", scanner);
 
                 if let Some(outer) = outer_expected {
-                    let expected_inner = Wrappers::None(outer.extract());
-                    if inner_type != expected_inner {
+                    let expected_inner = outer.extract();
+                    if inner_type != *expected_inner {
                         self.error(&format!(
                             "Mismatched types, expected [{}] found [{}] inside 'Some(...)'",
                             expected_inner, inner_type
@@ -103,16 +100,16 @@ impl Parser {
 
                 (
                     Value::Opt(crate::value::OptWrapper::Some(Box::new(value))),
-                    Wrappers::Opt(inner_type.extract()),
+                    TypeTag::Opt(inner_type.extract()),
                 )
             }
             TokenType::None => (
                 Value::Opt(crate::value::OptWrapper::None),
-                Wrappers::Opt(TypeTag::Id(TypeId::None)),
+                TypeTag::Opt(Arc::new(TypeTag::None)),
             ),
             _ => {
                 self.error("const value must be a literal (number, string, bool, Array,or Void).");
-                (Value::Void, Wrappers::None(Id(TypeId::Void)))
+                (Value::Void, TypeTag::Void)
             }
         }
     }

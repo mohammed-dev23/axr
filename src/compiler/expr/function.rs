@@ -53,53 +53,53 @@ impl Parser {
                     self.consume(TokenType::LeftBracket, "Exp", scanner);
 
                     let array = match self.current.token_type {
-                        TokenType::Int => Wrappers::None(TypeTag::Array(TypeId::Int)),
-                        TokenType::Unt => Wrappers::None(TypeTag::Array(TypeId::Unt)),
-                        TokenType::Float => Wrappers::None(TypeTag::Array(TypeId::Float)),
-                        TokenType::Str => Wrappers::None(TypeTag::Array(TypeId::Str)),
-                        TokenType::Bool => Wrappers::None(TypeTag::Array(TypeId::Bool)),
-                        TokenType::Char => Wrappers::None(TypeTag::Array(TypeId::Char)),
-                        _ => Wrappers::None(TypeTag::Array(TypeId::Void)),
+                        TokenType::Int => TypeTag::Array(Arc::new(TypeTag::Int)),
+                        TokenType::Unt => TypeTag::Array(Arc::new(TypeTag::Unt)),
+                        TokenType::Float => TypeTag::Array(Arc::new(TypeTag::Float)),
+                        TokenType::Str => TypeTag::Array(Arc::new(TypeTag::Str)),
+                        TokenType::Bool => TypeTag::Array(Arc::new(TypeTag::Bool)),
+                        TokenType::Char => TypeTag::Array(Arc::new(TypeTag::Char)),
+                        _ => TypeTag::Array(Arc::new(TypeTag::Void)),
                     };
 
                     self.advance(scanner);
                     self.consume(TokenType::RightBracket, "Exp", scanner);
                     array
                 } else {
-                    Wrappers::None(Array(Void))
+                    TypeTag::Array(Arc::new(TypeTag::Void))
                 };
 
                 let opt = if annotation_type == TokenType::Opt {
                     self.consume(TokenType::LeftBracket, "Exp", scanner);
 
                     let opt = match self.current.token_type {
-                        TokenType::Int => Wrappers::Opt(TypeTag::Id(TypeId::Int)),
-                        TokenType::Unt => Wrappers::Opt(TypeTag::Id(TypeId::Unt)),
-                        TokenType::Float => Wrappers::Opt(TypeTag::Id(TypeId::Float)),
-                        TokenType::Str => Wrappers::Opt(TypeTag::Id(TypeId::Str)),
-                        TokenType::Bool => Wrappers::Opt(TypeTag::Id(TypeId::Bool)),
-                        TokenType::Char => Wrappers::Opt(TypeTag::Id(TypeId::Char)),
-                        TokenType::Array => Wrappers::Opt(array.extract()),
-                        _ => Wrappers::None(TypeTag::Id(TypeId::Void)),
+                        TokenType::Int => TypeTag::Opt(Arc::new(TypeTag::Int)),
+                        TokenType::Unt => TypeTag::Opt(Arc::new(TypeTag::Unt)),
+                        TokenType::Float => TypeTag::Opt(Arc::new(TypeTag::Float)),
+                        TokenType::Str => TypeTag::Opt(Arc::new(TypeTag::Str)),
+                        TokenType::Bool => TypeTag::Opt(Arc::new(TypeTag::Bool)),
+                        TokenType::Char => TypeTag::Opt(Arc::new(TypeTag::Char)),
+                        TokenType::Array => TypeTag::Opt(Arc::new(array.clone())),
+                        _ => TypeTag::Void,
                     };
 
                     self.advance(scanner);
                     self.consume(TokenType::RightBracket, "Exp", scanner);
                     opt
                 } else {
-                    Wrappers::Opt(Id(Void))
+                    TypeTag::Opt(Arc::new(Void))
                 };
 
                 let expected_type = match annotation_type {
-                    TokenType::Int => Wrappers::None(Id(TypeId::Int)),
-                    TokenType::Str => Wrappers::None(Id(TypeId::Str)),
-                    TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
-                    TokenType::Float => Wrappers::None(Id(TypeId::Float)),
-                    TokenType::Char => Wrappers::None(Id(TypeId::Char)),
-                    TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
+                    TokenType::Int => TypeTag::Int,
+                    TokenType::Str => TypeTag::Str,
+                    TokenType::Bool => TypeTag::Bool,
+                    TokenType::Float => TypeTag::Float,
+                    TokenType::Char => TypeTag::Char,
+                    TokenType::Unt => TypeTag::Unt,
                     TokenType::Array => array,
                     TokenType::Opt => opt,
-                    _ => Wrappers::None(Id(TypeId::Void)),
+                    _ => TypeTag::Void,
                 };
 
                 self.compiler.locals[(self.compiler.local_count - 1) as usize].type_tag =

@@ -9,11 +9,8 @@ use crate::{
         Chunk,
         OpCode::{self},
     },
-    compiler::{
-        self, TypeId,
-        TypeTag::{self, Id},
-        Wrappers,
-    },
+    compiler::TypeTag,
+    compiler::{self},
     value::{
         Function, OptWrapper,
         Value::{self, Array, Char, Int, Str, Unt, Void},
@@ -22,6 +19,7 @@ use crate::{
 };
 
 mod core;
+
 mod opcodes {
     mod arithmetic;
     mod builtins;

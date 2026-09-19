@@ -3,7 +3,7 @@ use super::super::*;
 impl Parser {
     pub fn match_stmt(&mut self, scanner: &mut Scanner) {
         let mut jumps: Vec<usize> = Vec::new();
-        let mut type_tags: Vec<Wrappers> = Vec::new();
+        let mut type_tags: Vec<TypeTag> = Vec::new();
 
         self.expression(scanner);
         let ftype_tag = self.type_tag.pop().expect(TYPETAG_ERR);

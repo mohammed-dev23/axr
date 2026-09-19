@@ -55,8 +55,7 @@ impl Parser {
         self.variable_declaration(scanner);
 
         // we do not cont the var dec with the code len
-        // so we start the mausrement after the dec
-
+        // so we start the mausrement after the decss
         let loop_start = self.current_chunk().code.len();
 
         // the expresion

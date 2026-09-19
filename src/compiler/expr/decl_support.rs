@@ -25,37 +25,34 @@ impl Parser {
         self.mark_initialized();
     }
 
-    pub fn define_const(&mut self, name: String, value: Value, type_tag: &Wrappers) {
-        self.const_table.insert(name, (value, *type_tag));
+    pub fn define_const(&mut self, name: String, value: Value, type_tag: &TypeTag) {
+        self.const_table.insert(name, (value, type_tag.clone()));
     }
 
     pub fn casting(&mut self, scanner: &mut Scanner) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         self.advance(scanner);
         let token = self.previous.token_type;
 
         let target = match token {
-            TokenType::Int => Wrappers::None(Id(TypeId::Int)),
-            TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
-            TokenType::Float => Wrappers::None(Id(TypeId::Float)),
-            TokenType::Str => Wrappers::None(Id(TypeId::Str)),
-            TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
-            TokenType::Char => Wrappers::None(Id(TypeId::Char)),
-            _ => Wrappers::None(Id(TypeId::Void)),
+            TokenType::Int => TypeTag::Int,
+            TokenType::Unt => TypeTag::Unt,
+            TokenType::Float => TypeTag::Float,
+            TokenType::Str => TypeTag::Str,
+            TokenType::Bool => TypeTag::Bool,
+            TokenType::Char => TypeTag::Char,
+            _ => TypeTag::Void,
         };
 
-        match (type_tag, target) {
-            (Wrappers::None(Id(TypeId::Str)), _) => {
+        match (type_tag, target.clone()) {
+            (TypeTag::Str, _) => {
                 self.error(&format!("non-primitive cast: `str` to `{}`", target));
             }
-            (Wrappers::None(Id(TypeId::Char)), _) => {
+            (TypeTag::Char, _) => {
                 self.error(&format!("non-primitive cast: `char` to `{}`", target));
             }
-            (Wrappers::None(Id(TypeId::Bool)), _) => {
+            (TypeTag::Bool, _) => {
                 self.error(&format!("non-primitive cast: `bool` to `{}`", target));
             }
             _ => {}

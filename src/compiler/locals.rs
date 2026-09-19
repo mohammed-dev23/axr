@@ -4,7 +4,7 @@ pub struct Local {
     pub(in crate::compiler) name: Token,
     pub(in crate::compiler) depth: i32,
     pub(in crate::compiler) is_mut: bool,
-    pub(in crate::compiler) type_tag: Wrappers,
+    pub(in crate::compiler) type_tag: TypeTag,
 }
 
 impl Parser {
@@ -30,16 +30,16 @@ impl Parser {
             name: name.clone(),
             depth: -1,
             is_mut: false,
-            type_tag: Wrappers::None(Id(TypeId::Void)),
+            type_tag: TypeTag::Void,
         });
         self.compiler.local_count += 1;
     }
 
-    pub fn resolve_local(&mut self, name: &Token) -> Option<(u8, bool, Wrappers)> {
+    pub fn resolve_local(&mut self, name: &Token) -> Option<(u8, bool, TypeTag)> {
         for i in (0..self.compiler.local_count).rev() {
             let local = &self.compiler.locals[i as usize];
             let is_mut = local.is_mut;
-            let type_tag = local.type_tag;
+            let type_tag = local.type_tag.clone();
 
             if Self::identifiers_equal(name, &local.name) {
                 if local.depth == -1 {

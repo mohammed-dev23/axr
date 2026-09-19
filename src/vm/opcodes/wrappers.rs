@@ -1,5 +1,5 @@
 use crate::{
-    compiler::TypeId::{Char, Float, Int, Str, Unt, Void},
+    compiler::TypeTag::{Char, Float, Int, Str, Unt, Void},
     value::Value::Opt,
 };
 
@@ -19,27 +19,45 @@ impl Vm {
             };
 
             match type_tag {
-                t if t == Wrappers::Opt(TypeTag::Array(TypeId::Int)).as_bytes() => {
+                t if t
+                    == TypeTag::Opt(Arc::new(TypeTag::Array(Arc::new(TypeTag::Int))))
+                        .as_bytes() =>
+                {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Array(array)))));
                 }
-                t if t == Wrappers::Opt(TypeTag::Array(TypeId::Unt)).as_bytes() => {
+                t if t
+                    == TypeTag::Opt(Arc::new(TypeTag::Array(Arc::new(TypeTag::Unt))))
+                        .as_bytes() =>
+                {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Array(array)))));
                 }
-                t if t == Wrappers::Opt(TypeTag::Array(TypeId::Float)).as_bytes() => {
+                t if t
+                    == TypeTag::Opt(Arc::new(TypeTag::Array(Arc::new(TypeTag::Float))))
+                        .as_bytes() =>
+                {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Array(array)))));
                 }
-                t if t == Wrappers::Opt(TypeTag::Array(TypeId::Str)).as_bytes() => {
+                t if t
+                    == TypeTag::Opt(Arc::new(TypeTag::Array(Arc::new(TypeTag::Str))))
+                        .as_bytes() =>
+                {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Array(array)))));
                 }
-                t if t == Wrappers::Opt(TypeTag::Array(TypeId::Char)).as_bytes() => {
+                t if t
+                    == TypeTag::Opt(Arc::new(TypeTag::Array(Arc::new(TypeTag::Char))))
+                        .as_bytes() =>
+                {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Array(array)))));
                 }
-                t if t == Wrappers::Opt(TypeTag::Array(TypeId::Void)).as_bytes() => {
+                t if t
+                    == TypeTag::Opt(Arc::new(TypeTag::Array(Arc::new(TypeTag::Void))))
+                        .as_bytes() =>
+                {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Array(array)))));
                 }
@@ -47,31 +65,31 @@ impl Vm {
             }
         } else {
             match type_tag {
-                t if t == Wrappers::Opt(Id(Int)).as_bytes() => {
+                t if t == TypeTag::Opt(Arc::new(Int)).as_bytes() => {
                     self.stack
                         .push(Value::Opt(OptWrapper::Some(Box::new(Value::Int(
                             value.as_int(),
                         )))))
                 }
-                t if t == Wrappers::Opt(Id(Float)).as_bytes() => {
+                t if t == TypeTag::Opt(Arc::new(Float)).as_bytes() => {
                     self.stack.push(Opt(OptWrapper::Some(Box::new(Value::Float(
                         value.as_float(),
                     )))));
                 }
-                t if t == Wrappers::Opt(Id(Unt)).as_bytes() => {
+                t if t == TypeTag::Opt(Arc::new(Unt)).as_bytes() => {
                     self.stack
                         .push(Opt(OptWrapper::Some(Box::new(Value::Unt(value.as_unt())))));
                 }
-                t if t == Wrappers::Opt(Id(Str)).as_bytes() => {
+                t if t == TypeTag::Opt(Arc::new(Str)).as_bytes() => {
                     self.stack
                         .push(Opt(OptWrapper::Some(Box::new(Value::Str(value.as_str())))));
                 }
-                t if t == Wrappers::Opt(Id(Char)).as_bytes() => {
+                t if t == TypeTag::Opt(Arc::new(Char)).as_bytes() => {
                     self.stack.push(Opt(OptWrapper::Some(Box::new(Value::Char(
                         value.as_char(),
                     )))));
                 }
-                t if t == Wrappers::Opt(Id(Void)).as_bytes() => {
+                t if t == TypeTag::Opt(Arc::new(Void)).as_bytes() => {
                     self.stack
                         .push(Opt(OptWrapper::Some(Box::new(Value::Void))));
                 }

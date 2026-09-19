@@ -56,24 +56,25 @@ impl Parser {
         if value.contains(".") {
             let float_value: f64 = value.parse::<f64>().unwrap_or_default();
             self.emit_constant(Value::Float(float_value));
-            self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            self.type_tag.push(TypeTag::Float);
         } else if self
             .expected_type
-            .is_some_and(|t| t == Wrappers::None(Id(TypeId::Unt)))
+            .clone()
+            .is_some_and(|t| t == TypeTag::Unt)
         {
             let unt_value = value.parse::<u64>().unwrap_or_default();
             self.emit_constant(Value::Unt(unt_value));
-            self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+            self.type_tag.push(TypeTag::Unt);
         } else {
             let int_value = value.parse::<i64>();
 
             if let Ok(int) = int_value {
                 self.emit_constant(Value::Int(int));
-                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
+                self.type_tag.push(TypeTag::Int);
             } else {
                 let unt_value = value.parse::<u64>().unwrap_or_default();
                 self.emit_constant(Value::Unt(unt_value));
-                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+                self.type_tag.push(TypeTag::Unt);
             }
         }
     }
@@ -82,19 +83,19 @@ impl Parser {
         match self.previous.token_type {
             TokenType::True => {
                 self.emit_byte(OpCode::True as u8);
-                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+                self.type_tag.push(TypeTag::Bool);
             }
             TokenType::False => {
                 self.emit_byte(OpCode::False as u8);
-                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+                self.type_tag.push(TypeTag::Bool);
             }
             TokenType::Void => {
                 self.emit_byte(OpCode::Void as u8);
-                self.type_tag.push(Wrappers::None(Id(TypeId::Void)));
+                self.type_tag.push(TypeTag::Void);
             }
             TokenType::None => {
                 self.emit_byte(OpCode::None as u8);
-                self.type_tag.push(Wrappers::Opt(TypeTag::Id(TypeId::None)));
+                self.type_tag.push(TypeTag::Opt(Arc::new(TypeTag::None)));
             }
             _ => return,
         }
@@ -104,7 +105,7 @@ impl Parser {
         let raw = &self.previous.start;
         let trimmed = &raw[1..raw.len() - 1];
         self.emit_constant(Value::Str(Arc::from(trimmed)));
-        self.type_tag.push(Wrappers::None(Id(TypeId::Str)));
+        self.type_tag.push(TypeTag::Str);
     }
 
     pub fn char(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
@@ -118,6 +119,6 @@ impl Parser {
         }
 
         self.emit_constant(Value::Char(into_chars[0]));
-        self.type_tag.push(Wrappers::None(Id(TypeId::Char)));
+        self.type_tag.push(TypeTag::Char);
     }
 }

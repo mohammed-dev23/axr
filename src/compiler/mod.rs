@@ -18,8 +18,8 @@ use crate::{
 
 pub const TYPETAG_ERR: &str = "TypeTag stack underflow — compiler emitted unbalanced typetags";
 
+pub use TypeTag::Void;
 use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc, sync::Arc};
-pub use {TypeId::Void, TypeTag::Array, TypeTag::Id};
 
 pub struct Parser {
     pub(in crate::compiler) current: Token,
@@ -29,9 +29,9 @@ pub struct Parser {
     pub(in crate::compiler) painc_mode: bool,
     pub(in crate::compiler) compiler: Compiler,
     pub(in crate::compiler) compiler_stack: Vec<Compiler>,
-    pub(in crate::compiler) const_table: HashMap<String, (Value, Wrappers)>,
-    pub(in crate::compiler) type_tag: Vec<Wrappers>,
-    pub(in crate::compiler) expected_type: Option<Wrappers>,
+    pub(in crate::compiler) const_table: HashMap<String, (Value, TypeTag)>,
+    pub(in crate::compiler) type_tag: Vec<TypeTag>,
+    pub(in crate::compiler) expected_type: Option<TypeTag>,
     pub(in crate::compiler) control_flow: ControlFlow,
     pub(in crate::compiler) function_info: FunctionInfo,
     pub(in crate::compiler) info: Info,
@@ -52,8 +52,8 @@ pub struct Functions {
 }
 
 pub struct FunctionInfo {
-    parameters_type_tag_table: HashMap<String, Rc<RefCell<Vec<Wrappers>>>>,
-    return_type_tag_table: HashMap<String, Wrappers>,
+    parameters_type_tag_table: HashMap<String, Rc<RefCell<Vec<TypeTag>>>>,
+    return_type_tag_table: HashMap<String, TypeTag>,
 }
 
 #[derive(PartialEq, Eq)]
@@ -73,29 +73,19 @@ pub struct Info {
     pub last_local_slot: Option<u8>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[repr(u8)]
 pub enum TypeTag {
-    Id(TypeId),
-    Array(TypeId),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Wrappers {
-    Opt(TypeTag),
-    None(TypeTag),
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum TypeId {
     Int,
     Float,
     Str,
     Bool,
     Char,
     Unt,
-    #[allow(warnings)]
-    None,
     Void,
+    None,
+    Array(Arc<TypeTag>),
+    Opt(Arc<TypeTag>),
 }
 
 impl Compiler {
@@ -107,7 +97,7 @@ impl Compiler {
             },
             depth: 0,
             is_mut: false,
-            type_tag: Wrappers::None(Id(Void)),
+            type_tag: TypeTag::Void,
         }];
 
         Self {

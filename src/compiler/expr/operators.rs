@@ -19,44 +19,44 @@ impl Parser {
         let type_tag2 = self.type_tag.pop().expect(TYPETAG_ERR);
         let type_tag1 = self.type_tag.pop().expect(TYPETAG_ERR);
 
-        match (type_tag1, type_tag2) {
-            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int)))
-            | (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Float)))
-            | (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Int)))
-            | (Wrappers::None(Id(TypeId::Str)), Wrappers::None(Id(TypeId::Str)))
-            | (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt)))
-            | (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Float)))
-            | (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Unt)))
-            | (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float)))
-            | (Wrappers::None(Id(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool)))
-            | (Wrappers::None(Id(TypeId::Char)), Wrappers::None(Id(TypeId::Char)))
+        match (type_tag1.clone(), type_tag2.clone()) {
+            (TypeTag::Int, TypeTag::Int)
+            | (TypeTag::Int, TypeTag::Float)
+            | (TypeTag::Float, TypeTag::Int)
+            | (TypeTag::Str, TypeTag::Str)
+            | (TypeTag::Unt, TypeTag::Unt)
+            | (TypeTag::Unt, TypeTag::Float)
+            | (TypeTag::Float, TypeTag::Unt)
+            | (TypeTag::Float, TypeTag::Float)
+            | (TypeTag::Bool, TypeTag::Bool)
+            | (TypeTag::Char, TypeTag::Char)
                 if is_comp =>
             {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+                self.type_tag.push(TypeTag::Bool);
             }
-            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
+            (TypeTag::Int, TypeTag::Int) => {
+                self.type_tag.push(TypeTag::Int);
             }
-            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Float))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            (TypeTag::Int, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
             }
-            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Int))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            (TypeTag::Float, TypeTag::Int) => {
+                self.type_tag.push(TypeTag::Float);
             }
-            (Wrappers::None(Id(TypeId::Str)), Wrappers::None(Id(TypeId::Str))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Str)));
+            (TypeTag::Str, TypeTag::Str) => {
+                self.type_tag.push(TypeTag::Str);
             }
-            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+            (TypeTag::Unt, TypeTag::Unt) => {
+                self.type_tag.push(TypeTag::Unt);
             }
-            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Float))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            (TypeTag::Unt, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
             }
-            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Unt))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+            (TypeTag::Float, TypeTag::Unt) => {
+                self.type_tag.push(TypeTag::Unt);
             }
-            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            (TypeTag::Float, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
             }
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
@@ -88,14 +88,14 @@ impl Parser {
         let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Int)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
+            TypeTag::Int => {
+                self.type_tag.push(TypeTag::Int);
             }
-            Wrappers::None(Id(TypeId::Float)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            TypeTag::Float => {
+                self.type_tag.push(TypeTag::Float);
             }
-            Wrappers::None(Id(TypeId::Bool)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+            TypeTag::Bool => {
+                self.type_tag.push(TypeTag::Bool);
             }
 
             _ => self.error(&format!(
@@ -112,10 +112,7 @@ impl Parser {
     }
 
     pub fn or_expr(&mut self, scanner: &mut Scanner) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         let else_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         let end_jump = self.emit_jump(OpCode::Jump as usize);
@@ -124,47 +121,38 @@ impl Parser {
         self.emit_byte(OpCode::Pop as u8);
 
         self.parse_precedence(Precedence::Or, scanner);
-        let type_tag2 = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag2 = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
-        match (type_tag, type_tag2) {
-            (Wrappers::None(Id(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool))) => {}
+        match (type_tag.clone(), type_tag2.clone()) {
+            (TypeTag::Bool, TypeTag::Bool) => {}
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
                 type_tag, type_tag2
             )),
         }
 
-        self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+        self.type_tag.push(TypeTag::Bool);
         self.patch_jump(end_jump as usize);
     }
 
     pub fn and_expr(&mut self, scanner: &mut Scanner) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         let end_jump = self.emit_jump(OpCode::JumpIfFalse as usize);
         self.emit_byte(OpCode::Pop as u8);
 
         self.parse_precedence(Precedence::And, scanner);
-        let type_tag2 = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag2 = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
-        match (type_tag, type_tag2) {
-            (Wrappers::None(Id(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool))) => {}
+        match (&type_tag, &type_tag2) {
+            (TypeTag::Bool, TypeTag::Bool) => {}
             _ => self.error(&format!(
                 "mismatched types cannot use [{}] with [{}]",
                 type_tag, type_tag2
             )),
         }
 
-        self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+        self.type_tag.push(TypeTag::Bool);
         self.patch_jump(end_jump as usize);
     }
 
@@ -177,23 +165,23 @@ impl Parser {
         self.expression(scanner);
         let type_tag_rhs = self.type_tag.pop().expect(TYPETAG_ERR);
 
-        match (type_tag_rhs, type_tag_lhs) {
-            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
+        match (&type_tag_rhs, &type_tag_lhs) {
+            (TypeTag::Int, TypeTag::Int) => {
+                self.type_tag.push(TypeTag::Int);
             }
-            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+            (TypeTag::Unt, TypeTag::Unt) => {
+                self.type_tag.push(TypeTag::Unt);
             }
-            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            (TypeTag::Float, &TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
             }
-            (Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float)), _) => {
+            (TypeTag::Int | TypeTag::Unt | TypeTag::Float, _) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
                 ));
             }
-            (_, Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float))) => {
+            (_, TypeTag::Int | TypeTag::Unt | TypeTag::Float) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
@@ -223,23 +211,23 @@ impl Parser {
         self.expression(scanner);
         let type_tag_rhs = self.type_tag.pop().expect(TYPETAG_ERR);
 
-        match (type_tag_rhs, type_tag_lhs) {
-            (Wrappers::None(Id(TypeId::Int)), Wrappers::None(Id(TypeId::Int))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
+        match (&type_tag_rhs, &type_tag_lhs) {
+            (TypeTag::Int, TypeTag::Int) => {
+                self.type_tag.push(TypeTag::Int);
             }
-            (Wrappers::None(Id(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+            (TypeTag::Unt, TypeTag::Unt) => {
+                self.type_tag.push(TypeTag::Unt);
             }
-            (Wrappers::None(Id(TypeId::Float)), Wrappers::None(Id(TypeId::Float))) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            (TypeTag::Float, TypeTag::Float) => {
+                self.type_tag.push(TypeTag::Float);
             }
-            (Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float)), _) => {
+            (TypeTag::Int | TypeTag::Unt | TypeTag::Float, _) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs
                 ));
             }
-            (_, Wrappers::None(Id(TypeId::Int | TypeId::Unt | TypeId::Float))) => {
+            (_, TypeTag::Int | TypeTag::Unt | TypeTag::Float) => {
                 self.error(&format!(
                     "Missmatched types expected [{}] found [{}]",
                     type_tag_rhs, type_tag_lhs

@@ -51,7 +51,7 @@ impl Parser {
         let (array, mut is_array) = if annotation_type.is_some_and(|t| t == TokenType::Array) {
             self.parse_array_typetag(scanner)
         } else {
-            (TypeTag::Array(TypeId::Void), false)
+            (TypeTag::Array(Arc::new(TypeTag::Void)), false)
         };
 
         let opt = if annotation_type.is_some_and(|t| t == TokenType::Opt) {
@@ -60,52 +60,52 @@ impl Parser {
             self.advance(scanner);
 
             let opt = match self.previous.token_type {
-                TokenType::Int => Wrappers::Opt(Id(TypeId::Int)),
-                TokenType::Unt => Wrappers::Opt(Id(TypeId::Unt)),
-                TokenType::Float => Wrappers::Opt(Id(TypeId::Float)),
-                TokenType::Str => Wrappers::Opt(Id(TypeId::Str)),
-                TokenType::Char => Wrappers::Opt(Id(TypeId::Char)),
+                TokenType::Int => TypeTag::Opt(Arc::new(TypeTag::Int)),
+                TokenType::Unt => TypeTag::Opt(Arc::new(TypeTag::Unt)),
+                TokenType::Float => TypeTag::Opt(Arc::new(TypeTag::Float)),
+                TokenType::Str => TypeTag::Opt(Arc::new(TypeTag::Str)),
+                TokenType::Char => TypeTag::Opt(Arc::new(TypeTag::Char)),
                 TokenType::Array => {
                     is_array = true;
-                    Wrappers::Opt(self.parse_array_typetag(scanner).0)
+                    TypeTag::Opt(Arc::new(self.parse_array_typetag(scanner).0))
                 }
-                _ => Wrappers::Opt(Id(TypeId::Void)),
+                _ => TypeTag::Opt(Arc::new(TypeTag::Void)),
             };
 
             self.consume(TokenType::RightBracket, "exp", scanner);
             is_opt = true;
             opt
         } else {
-            Wrappers::Opt(TypeTag::Id(Void))
+            TypeTag::Opt(Arc::new(Void))
         };
 
         self.expected_type = annotation_type.map(|t| match t {
-            TokenType::Int => Wrappers::None(Id(TypeId::Int)),
-            TokenType::Str => Wrappers::None(Id(TypeId::Str)),
-            TokenType::Bool => Wrappers::None(Id(TypeId::Bool)),
-            TokenType::Float => Wrappers::None(Id(TypeId::Float)),
-            TokenType::Char => Wrappers::None(Id(TypeId::Char)),
-            TokenType::Unt => Wrappers::None(Id(TypeId::Unt)),
-            TokenType::Array => Wrappers::None(array),
-            TokenType::Opt => opt,
-            _ => Wrappers::None(Id(TypeId::Void)),
+            TokenType::Int => TypeTag::Int,
+            TokenType::Str => TypeTag::Str,
+            TokenType::Bool => TypeTag::Bool,
+            TokenType::Float => TypeTag::Float,
+            TokenType::Char => TypeTag::Char,
+            TokenType::Unt => TypeTag::Unt,
+            TokenType::Array => array.clone(),
+            TokenType::Opt => opt.clone(),
+            _ => TypeTag::Void,
         });
 
         if self.match_consume(&TokenType::Equal, scanner) {
             self.expression(scanner);
         } else {
             self.emit_byte(OpCode::Void as u8);
-            self.type_tag.push(Wrappers::None(Id(TypeId::Void)));
+            self.type_tag.push(TypeTag::Void);
         }
 
         let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
-        self.compiler.locals[self.compiler.local_count as usize - 1].type_tag = type_tag;
+        self.compiler.locals[self.compiler.local_count as usize - 1].type_tag = type_tag.clone();
 
         if let Some(token) = annotation_type {
             match token {
                 TokenType::Opt => {
-                    if type_tag != Wrappers::Opt(TypeTag::Id(TypeId::None)) && type_tag != opt {
+                    if type_tag != TypeTag::Opt(Arc::new(TypeTag::None)) && type_tag != opt {
                         self.error(&format!(
                             "Mismatched types, expected [{}] found [{}]",
                             opt, type_tag
@@ -113,7 +113,7 @@ impl Parser {
                     }
                 }
                 TokenType::Array => {
-                    let array = Wrappers::None(array);
+                    let array = array;
 
                     if type_tag != array {
                         self.error(&format!(
@@ -156,38 +156,25 @@ impl Parser {
         let mut is_opt = false;
 
         let array = if annotation_type == TokenType::Array {
-            self.consume(TokenType::LeftBracket, "Exp", scanner);
-
-            let array = match self.current.token_type {
-                TokenType::Int => Wrappers::None(TypeTag::Array(TypeId::Int)),
-                TokenType::Unt => Wrappers::None(TypeTag::Array(TypeId::Unt)),
-                TokenType::Float => Wrappers::None(TypeTag::Array(TypeId::Float)),
-                TokenType::Str => Wrappers::None(TypeTag::Array(TypeId::Str)),
-                TokenType::Bool => Wrappers::None(TypeTag::Array(TypeId::Bool)),
-                TokenType::Char => Wrappers::None(TypeTag::Array(TypeId::Char)),
-                _ => Wrappers::None(TypeTag::Array(TypeId::Void)),
-            };
-
-            self.advance(scanner);
-            self.consume(TokenType::RightBracket, "Exp", scanner);
+            let array = self.array_type(scanner);
             is_array = true;
             array
         } else {
-            Wrappers::None(Array(Void))
+            TypeTag::Array(Arc::new(TypeTag::Void))
         };
 
         let opt = if annotation_type == TokenType::Opt {
             self.consume(TokenType::LeftBracket, "Exp", scanner);
 
             let opt = match self.current.token_type {
-                TokenType::Int => Wrappers::Opt(TypeTag::Id(TypeId::Int)),
-                TokenType::Unt => Wrappers::Opt(TypeTag::Id(TypeId::Unt)),
-                TokenType::Float => Wrappers::Opt(TypeTag::Id(TypeId::Float)),
-                TokenType::Str => Wrappers::Opt(TypeTag::Id(TypeId::Str)),
-                TokenType::Bool => Wrappers::Opt(TypeTag::Id(TypeId::Bool)),
-                TokenType::Char => Wrappers::Opt(TypeTag::Id(TypeId::Char)),
-                TokenType::Array => Wrappers::Opt(array.extract()),
-                _ => Wrappers::None(TypeTag::Id(TypeId::Void)),
+                TokenType::Int => TypeTag::Opt(Arc::new(TypeTag::Int)),
+                TokenType::Unt => TypeTag::Opt(Arc::new(TypeTag::Unt)),
+                TokenType::Float => TypeTag::Opt(Arc::new(TypeTag::Float)),
+                TokenType::Str => TypeTag::Opt(Arc::new(TypeTag::Str)),
+                TokenType::Bool => TypeTag::Opt(Arc::new(TypeTag::Bool)),
+                TokenType::Char => TypeTag::Opt(Arc::new(TypeTag::Char)),
+                TokenType::Array => TypeTag::Opt(Arc::new(array.clone())),
+                _ => TypeTag::Void,
             };
 
             self.advance(scanner);
@@ -195,19 +182,19 @@ impl Parser {
             is_opt = true;
             opt
         } else {
-            Wrappers::Opt(Id(Void))
+            TypeTag::Opt(Arc::new(Void))
         };
 
         self.expected_type = match annotation_type {
-            TokenType::Int => Some(Wrappers::None(Id(TypeId::Int))),
-            TokenType::Str => Some(Wrappers::None(Id(TypeId::Str))),
-            TokenType::Bool => Some(Wrappers::None(Id(TypeId::Bool))),
-            TokenType::Float => Some(Wrappers::None(Id(TypeId::Float))),
-            TokenType::Char => Some(Wrappers::None(Id(TypeId::Char))),
-            TokenType::Unt => Some(Wrappers::None(Id(TypeId::Unt))),
-            TokenType::Array => Some(array),
-            TokenType::Opt => Some(opt),
-            _ => Some(Wrappers::None(Id(TypeId::Void))),
+            TokenType::Int => Some(TypeTag::Int),
+            TokenType::Str => Some(TypeTag::Str),
+            TokenType::Bool => Some(TypeTag::Bool),
+            TokenType::Float => Some(TypeTag::Float),
+            TokenType::Char => Some(TypeTag::Char),
+            TokenType::Unt => Some(TypeTag::Unt),
+            TokenType::Array => Some(array.clone()),
+            TokenType::Opt => Some(opt.clone()),
+            _ => Some(TypeTag::Void),
         };
 
         self.consume(TokenType::Equal, "Expect '=' after const name.", scanner);
@@ -216,7 +203,7 @@ impl Parser {
 
         match annotation_type {
             TokenType::Opt => {
-                if type_tag != Wrappers::Opt(TypeTag::Id(TypeId::None)) && type_tag != opt {
+                if type_tag != TypeTag::Opt(Arc::new(TypeTag::None)) && type_tag != opt {
                     self.error(&format!(
                         "Mismatched types, expected [{}] found [{}]",
                         opt, type_tag

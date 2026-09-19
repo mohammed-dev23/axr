@@ -6,13 +6,13 @@ impl Vm {
         let value = self.stack.pop().expect(ERR_POP_MES);
 
         match target {
-            t if t == Id(TypeId::Int).as_bytes() => {
+            t if t == TypeTag::Int.as_bytes() => {
                 self.stack.push(Value::Int(value.cast_int().unwrap()))
             }
-            t if t == Id(TypeId::Float).as_bytes() => {
+            t if t == TypeTag::Float.as_bytes() => {
                 self.stack.push(Value::Float(value.cast_float().unwrap()))
             }
-            t if t == Id(TypeId::Unt).as_bytes() => {
+            t if t == TypeTag::Unt.as_bytes() => {
                 self.stack.push(Value::Unt(value.cast_unt().unwrap()));
             }
             _ => return InterpretResult::RuntimeError,
@@ -26,21 +26,21 @@ impl Vm {
         let lhs_type_tag = self.read_byte();
 
         match lhs_type_tag {
-            t if t == TypeTag::Id(TypeId::Int).as_bytes() => {
+            t if t == TypeTag::Int.as_bytes() => {
                 let lhs = lhs_value.as_int();
                 let mut rhs = rhs_value.as_int();
                 rhs += lhs;
 
                 self.stack.push(Value::Int(rhs));
             }
-            t if t == TypeTag::Id(TypeId::Unt).as_bytes() => {
+            t if t == TypeTag::Unt.as_bytes() => {
                 let lhs = lhs_value.as_unt();
                 let mut rhs = rhs_value.as_unt();
                 rhs += lhs;
 
                 self.stack.push(Value::Unt(rhs));
             }
-            t if t == TypeTag::Id(TypeId::Float).as_bytes() => {
+            t if t == TypeTag::Float.as_bytes() => {
                 let lhs = lhs_value.as_float();
                 let mut rhs = rhs_value.as_float();
                 rhs += lhs;
@@ -59,21 +59,21 @@ impl Vm {
         let lhs_type_tag = self.read_byte();
 
         match lhs_type_tag {
-            t if t == TypeTag::Id(TypeId::Int).as_bytes() => {
+            t if t == TypeTag::Int.as_bytes() => {
                 let lhs = lhs_value.as_int();
                 let mut rhs = rhs_value.as_int();
                 rhs -= lhs;
 
                 self.stack.push(Value::Int(rhs));
             }
-            t if t == TypeTag::Id(TypeId::Unt).as_bytes() => {
+            t if t == TypeTag::Unt.as_bytes() => {
                 let lhs = lhs_value.as_unt();
                 let mut rhs = rhs_value.as_unt();
                 rhs -= lhs;
 
                 self.stack.push(Value::Unt(rhs));
             }
-            t if t == TypeTag::Id(TypeId::Float).as_bytes() => {
+            t if t == TypeTag::Float.as_bytes() => {
                 let lhs = lhs_value.as_float();
                 let mut rhs = rhs_value.as_float();
                 rhs -= lhs;

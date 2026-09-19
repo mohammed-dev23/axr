@@ -74,7 +74,7 @@ pub enum OpCode {
     //handlers
     Grab,
 
-    //Wrappers
+    //TypeTag
     Some,
     None,
 

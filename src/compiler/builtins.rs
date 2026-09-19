@@ -9,7 +9,7 @@ impl Parser {
 
         let expected_type = self.expected_type.take().unwrap_or_else(|| {
             self.error("input() needs a type context, e.g. `let x : str = input();`");
-            Wrappers::None(Id(TypeId::Void))
+            TypeTag::Void
         });
 
         self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);

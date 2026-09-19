@@ -59,11 +59,11 @@ impl Parser {
         };
 
         if self.match_consume(&TokenType::Semicolon, scanner) {
-            if expected_return_type != Wrappers::None(TypeTag::Id(Void)) {
+            if expected_return_type != TypeTag::Void {
                 self.error(&format!(
                     "Expected [{}] found [{}]",
                     expected_return_type,
-                    Wrappers::None(TypeTag::Id(Void))
+                    TypeTag::Void
                 ));
             }
 

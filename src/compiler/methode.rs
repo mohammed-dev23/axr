@@ -32,14 +32,11 @@ impl Parser {
     }
 
     pub fn trim_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Str)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Str)));
+            TypeTag::Str => {
+                self.type_tag.push(TypeTag::Str);
             }
             _ => self.error(&format!(
                 "cannot use {} for trim, only str values that are allowed",
@@ -51,14 +48,11 @@ impl Parser {
     }
 
     pub fn isempty_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Str)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Bool)));
+            TypeTag::Str => {
+                self.type_tag.push(TypeTag::Bool);
             }
             _ => self.error(&format!(
                 "cannot use {} for is_empty, only str values that are allowed",
@@ -74,17 +68,14 @@ impl Parser {
             self.error("Value must be mutated in order to use rev on it!");
         }
 
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Str)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Str)));
+            TypeTag::Str => {
+                self.type_tag.push(TypeTag::Str);
             }
-            Wrappers::None(TypeTag::Array(x)) => {
-                self.type_tag.push(Wrappers::None(TypeTag::Array(x)));
+            TypeTag::Array(x) => {
+                self.type_tag.push(TypeTag::Array(x));
             }
             _ => self.error(&format!(
                 "cannot use {} for rev, only str/arrays values that are allowed",
@@ -96,14 +87,11 @@ impl Parser {
     }
 
     pub fn sqrt_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Float)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            TypeTag::Float => {
+                self.type_tag.push(TypeTag::Float);
             }
             _ => self.error(&format!(
                 "cannot use {} for round, only float values that are allowed",
@@ -115,14 +103,11 @@ impl Parser {
     }
 
     pub fn round_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Float)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            TypeTag::Float => {
+                self.type_tag.push(TypeTag::Float);
             }
             _ => self.error(&format!(
                 "cannot use {} for round, only float values that are allowed",
@@ -134,14 +119,11 @@ impl Parser {
     }
 
     pub fn celi_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Float)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            TypeTag::Float => {
+                self.type_tag.push(TypeTag::Float);
             }
             _ => self.error(&format!(
                 "cannot use {} for ceil, only float values that are allowed",
@@ -153,14 +135,11 @@ impl Parser {
     }
 
     pub fn floor_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Float)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            TypeTag::Float => {
+                self.type_tag.push(TypeTag::Float);
             }
             _ => self.error(&format!(
                 "cannot use {} for floor, only float values that are allowed",
@@ -172,17 +151,14 @@ impl Parser {
     }
 
     pub fn abs_methode(&mut self) {
-        let type_tag = self
-            .type_tag
-            .pop()
-            .unwrap_or(Wrappers::None(Id(TypeId::Void)));
+        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         match type_tag {
-            Wrappers::None(Id(TypeId::Int)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Int)));
+            TypeTag::Int => {
+                self.type_tag.push(TypeTag::Int);
             }
-            Wrappers::None(Id(TypeId::Float)) => {
-                self.type_tag.push(Wrappers::None(Id(TypeId::Float)));
+            TypeTag::Float => {
+                self.type_tag.push(TypeTag::Float);
             }
             _ => self.error(&format!(
                 "cannot use {} for abs, only float/int values that are allowed",
@@ -201,24 +177,16 @@ impl Parser {
         let array_type = self
             .type_tag
             .pop()
-            .unwrap_or(Wrappers::None(TypeTag::Array(Void)));
+            .unwrap_or(TypeTag::Array(Arc::new(TypeTag::Void)));
         self.expression(scanner);
         let values_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
 
-        match (array_type, values_typetag) {
-            (Wrappers::None(TypeTag::Array(TypeId::Int)), Wrappers::None(Id(TypeId::Int)))
-            | (Wrappers::None(TypeTag::Array(TypeId::Unt)), Wrappers::None(Id(TypeId::Unt)))
-            | (Wrappers::None(TypeTag::Array(TypeId::Float)), Wrappers::None(Id(TypeId::Float)))
-            | (Wrappers::None(TypeTag::Array(TypeId::Str)), Wrappers::None(Id(TypeId::Str)))
-            | (Wrappers::None(TypeTag::Array(TypeId::Char)), Wrappers::None(Id(TypeId::Char)))
-            | (Wrappers::None(TypeTag::Array(TypeId::Bool)), Wrappers::None(Id(TypeId::Bool)))
-            | (Wrappers::None(TypeTag::Array(TypeId::Void)), Wrappers::None(Id(TypeId::Void))) => {}
-            _ => {
-                self.error(&format!(
-                    "Mismatched types array for type [{}] found [{}]",
-                    array_type, values_typetag
-                ));
-            }
+        match &array_type {
+            TypeTag::Array(x) if values_typetag != **x => {}
+            _ => self.error(&format!(
+                "Mismatched types array for type [{}] found [{}]",
+                array_type, values_typetag
+            )),
         }
 
         self.emit_byte(OpCode::Push as u8);
@@ -232,10 +200,9 @@ impl Parser {
         let type_tag = self
             .type_tag
             .pop()
-            .unwrap_or(Wrappers::None(Array(Void)))
-            .as_typeid();
+            .unwrap_or(TypeTag::Array(Arc::new(TypeTag::Void)));
 
-        self.type_tag.push(Wrappers::Opt(Id(type_tag)));
+        self.type_tag.push(TypeTag::Opt(Arc::new(type_tag)));
         self.emit_byte(OpCode::PopArray as u8);
     }
 
@@ -243,27 +210,24 @@ impl Parser {
         let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match type_tag {
-            Wrappers::None(Array(_)) => {}
-            Wrappers::None(Id(TypeId::Str)) => {}
+            TypeTag::Array(_) => {}
+            TypeTag::Str => {}
             _ => {
                 self.error(&format!("Can not use len() on [{}]", type_tag));
             }
         }
 
         self.emit_byte(OpCode::Len as u8);
-        self.type_tag.push(Wrappers::None(Id(TypeId::Unt)));
+        self.type_tag.push(TypeTag::Unt);
     }
 
     pub fn grab_methode(&mut self) {
         let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         match type_tag {
-            Wrappers::Opt(x) => match x {
-                TypeTag::Id(x) => {
-                    self.type_tag.push(Wrappers::None(Id(x)));
-                }
-                TypeTag::Array(x) => {
-                    self.type_tag.push(Wrappers::None(Array(x)));
+            TypeTag::Opt(x) => match &x {
+                x => {
+                    self.type_tag.push(x.as_ref().clone());
                 }
             },
             _ => {
