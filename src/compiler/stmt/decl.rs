@@ -115,11 +115,20 @@ impl Parser {
                 TokenType::Array => {
                     let array = array;
 
-                    if type_tag != array {
-                        self.error(&format!(
-                            "Mismatched types, expected [{}] found [{}]",
-                            opt, type_tag
-                        ));
+                    if let Some(ref x) = self.expected_type {
+                        if x != &type_tag {
+                            self.error(&format!(
+                                "Mismatched types, expected [{}] found [{}]",
+                                x, type_tag
+                            ));
+                        }
+                    } else {
+                        if type_tag != array {
+                            self.error(&format!(
+                                "Mismatched types, expected [{}] found [{}]",
+                                array, type_tag
+                            ));
+                        }
                     }
                 }
                 _ => self.type_check(&type_tag, &token, is_array, is_opt),

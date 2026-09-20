@@ -1,0 +1,10 @@
+fn main() {
+    // sanity baseline: single level of nesting, uniform sibling lengths.
+    // expected: compiles, runs, prints the array.
+
+    let grid : Array[Array[int]] = [[1, 2, 3], [4, 5, 6]];
+
+    println(grid);
+
+    return;
+}

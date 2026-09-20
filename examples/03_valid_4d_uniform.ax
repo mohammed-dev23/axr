@@ -1,0 +1,13 @@
+fn main() {
+    // pushes one level deeper than the bug report (4 levels instead of 3)
+    // to check the fix isn't accidentally special-cased for depth-3.
+    // expected: compiles cleanly.
+
+    let deep : Array[Array[Array[Array[int]]]] =
+        [[[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+         [[[9, 10], [11, 12]], [[13, 14], [15, 16]]]];
+
+    println(deep);
+
+    return;
+}

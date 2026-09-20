@@ -60,7 +60,7 @@ impl fmt::Display for TypeTag {
             TypeTag::Unt => write!(f, "unt"),
             TypeTag::None => write!(f, "None"),
             TypeTag::Opt(x) => write!(f, "{}", x),
-            TypeTag::Array(x) => write!(f, "{}", x),
+            TypeTag::Array(x) => write!(f, "Array[{}]", x),
         }
     }
 }
@@ -115,7 +115,7 @@ impl Parser {
             TokenType::Str => TypeTag::Array(Arc::new(TypeTag::Str)),
             TokenType::Bool => TypeTag::Array(Arc::new(TypeTag::Bool)),
             TokenType::Char => TypeTag::Array(Arc::new(TypeTag::Char)),
-            TokenType::Array => self.array_type(scanner),
+            TokenType::Array => TypeTag::Array(Arc::new(self.array_type(scanner))),
             _ => TypeTag::Array(Arc::new(TypeTag::Void)),
         };
 
