@@ -56,7 +56,6 @@ pub enum TokenType {
     Char,
 
     //Keywords.
-    Print,
     Println,
     Let,
     Tilde,
@@ -337,7 +336,6 @@ impl<'s> Scanner<'s> {
         let text = &self.start[..self.start.len() - self.current.len()];
 
         match text {
-            "print" => TokenType::Print,
             "let" => TokenType::Let,
             "true" => TokenType::True,
             "false" => TokenType::False,

@@ -1,9 +1,24 @@
 use super::*;
 use crate::scanner::TokenType::Identifier;
+use crate::vm::def::NATIVEMETA;
 
 impl Parser {
     pub fn pre_pass(&mut self, source: &str) {
         let mut scanner = Scanner::new(source);
+
+        for i in &NATIVEMETA {
+            let name = i.name;
+            let parameters = i.parameters;
+            let return_type = &i.return_typetag;
+
+            self.function_info
+                .parameters_type_tag_table
+                .insert(name.to_string(), Rc::new(RefCell::new(parameters.to_vec())));
+
+            self.function_info
+                .return_type_tag_table
+                .insert(name.to_string(), return_type.clone());
+        }
 
         loop {
             self.advance(&mut scanner);

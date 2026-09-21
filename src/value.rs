@@ -20,6 +20,7 @@ pub enum Value {
     Array(Arc<Mutex<Vec<Value>>>),
     Opt(OptWrapper),
     Function(Arc<Function>),
+    NativeFunction(Arc<Native>),
     Void,
 }
 
@@ -30,12 +31,13 @@ pub enum OptWrapper {
 }
 
 #[derive(Debug, Clone)]
-#[allow(warnings)]
 pub struct Function {
     pub arity: usize,
     pub chunk: Chunk,
     pub name: String,
 }
+
+pub type Native = fn(arg_count: usize, args: &Value) -> Value;
 
 impl Function {
     pub fn new() -> Self {
@@ -87,6 +89,13 @@ impl Value {
     pub fn is_fn(&self) -> bool {
         match self {
             Self::Function(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_native(&self) -> bool {
+        match self {
+            Self::NativeFunction(_) => true,
             _ => false,
         }
     }
@@ -156,6 +165,13 @@ impl Value {
             _ => None,
         }
     }
+
+    pub fn as_native(self) -> Option<Arc<Native>> {
+        match self {
+            Self::NativeFunction(x) => Some(x),
+            _ => None,
+        }
+    }
 }
 
 impl Value {
@@ -208,6 +224,7 @@ impl fmt::Display for Value {
                 OptWrapper::None => write!(f, "None"),
             },
             Value::Function(x) => write!(f, "{:?}", x),
+            Value::NativeFunction(x) => write!(f, "{:?}", x),
             Value::Void => write!(f, "Void"),
         }
     }

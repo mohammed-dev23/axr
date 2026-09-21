@@ -1,9 +1,18 @@
+use crate::value::Native;
+
 use super::*;
 
 impl Vm {
     pub fn call_value(&mut self, value: Value, arg_count: usize) -> InterpretResult {
         match value {
             Value::Function(function) => self.call(function, arg_count),
+            Value::NativeFunction(native) => {
+                let native = native.as_ref();
+                let value = native(arg_count, &self.stack[self.stack.len() - arg_count]);
+                self.stack.truncate(self.stack.len() - (arg_count + 1));
+                self.stack.push(value);
+                InterpretResult::Ok
+            }
             _ => {
                 self.runtime_err("Uncallable!.");
                 InterpretResult::RuntimeError
@@ -28,5 +37,15 @@ impl Vm {
 
         self.frames.frame_count += 1;
         InterpretResult::Ok
+    }
+
+    pub fn define_native(&mut self, name: Arc<str>, native: Native) {
+        self.stack.push(Value::NativeFunction(Arc::new(native)));
+        self.stack.push(Str(name));
+
+        self.global_table.insert(
+            self.stack.pop().expect(ERR_POP_MES).as_str(),
+            self.stack.pop().expect(ERR_POP_MES).clone(),
+        );
     }
 }

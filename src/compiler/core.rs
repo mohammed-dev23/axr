@@ -98,8 +98,7 @@ impl Parser {
                 return;
             } else {
                 match self.current.token_type {
-                    TokenType::Print
-                    | TokenType::Println
+                    TokenType::Println
                     | TokenType::Let
                     | TokenType::Const
                     | TokenType::Fn

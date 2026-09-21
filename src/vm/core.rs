@@ -2,14 +2,18 @@ use super::*;
 
 impl Vm {
     pub fn new() -> Self {
-        Self {
+        let mut new = Self {
             stack: Vec::new(),
             frames: Frame {
                 frames: Vec::new(),
                 frame_count: 0,
             },
             global_table: HashMap::new(),
-        }
+        };
+
+        new.def();
+
+        new
     }
 
     pub fn interpret(&mut self, source: String) -> InterpretResult {

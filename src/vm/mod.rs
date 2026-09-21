@@ -42,6 +42,7 @@ mod run {
     mod run_wrappers;
 }
 
+pub mod def;
 mod function;
 
 pub const ERR_POP_MES: &str = "VM stack underflow — compiler emitted unbalanced bytecode";

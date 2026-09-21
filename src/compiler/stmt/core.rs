@@ -19,10 +19,6 @@ impl Parser {
                 self.match_consume(&token, scanner);
                 self.println_statement(scanner);
             }
-            TokenType::Print => {
-                self.match_consume(&token, scanner);
-                self.print_statement(scanner);
-            }
             TokenType::Const => {
                 self.match_consume(&token, scanner);
                 self.const_declaration(scanner);
