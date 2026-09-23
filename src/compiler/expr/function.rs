@@ -140,24 +140,19 @@ impl Parser {
     }
 
     pub fn call(&mut self, scanner: &mut Scanner) {
-        let expected_return_type = match self
-            .function_info
-            .return_type_tag_table
-            .get(&self.prevprev.start)
-            .cloned()
-        {
-            Some(x) => x,
-            None => return self.error("Function must return value!."),
-        };
-
-        let arg_count = self.argument_list(scanner);
-        self.type_tag.push(expected_return_type);
+        let (arg_count, turbofish, generic) = self.argument_list(scanner);
         self.emit_bytes(OpCode::Call as u8, arg_count as u8);
+
+        if turbofish {
+            self.emit_byte(generic.as_bytes());
+        }
     }
 
-    pub fn argument_list(&mut self, scanner: &mut Scanner) -> usize {
+    pub fn argument_list(&mut self, scanner: &mut Scanner) -> (usize, bool, TypeTag) {
         let mut arg_count = 0;
-        let functions_name = &self.prevprev.start;
+        let mut turbofish = false;
+        let mut type_tag = TypeTag::Void;
+        let functions_name = &self.prevprev.start.clone();
         let table = self.function_info.parameters_type_tag_table.clone();
 
         let stack = table
@@ -194,6 +189,46 @@ impl Parser {
         }
 
         self.consume(RigtParen, "Expect ')' after arguments", scanner);
-        arg_count
+
+        if self.match_consume(&TokenType::DoubleColon, scanner) {
+            self.consume(
+                TokenType::LeftBracket,
+                "Expect '[' after :: for turbofish",
+                scanner,
+            );
+
+            self.advance(scanner);
+            let generic = self.previous.token_type.as_typetag().unwrap();
+
+            self.consume(TokenType::RightBracket, "Expect ']' after generic", scanner);
+
+            self.function_info
+                .return_type_tag_table
+                .insert(functions_name.clone(), generic.clone());
+
+            type_tag = generic;
+            turbofish = true;
+        }
+
+        let expected_return_type = match self
+            .function_info
+            .return_type_tag_table
+            .get(&self.prevprev.start)
+            .cloned()
+        {
+            Some(x) => x,
+            None => {
+                self.error("Function must return value! , if it was a call than it need a ::[T].");
+                return (0, false, TypeTag::Void);
+            }
+        };
+
+        self.type_tag.push(expected_return_type);
+
+        if turbofish {
+            (arg_count, true, type_tag)
+        } else {
+            (arg_count, false, TypeTag::Void)
+        }
     }
 }

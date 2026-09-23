@@ -1,4 +1,5 @@
 fn main() {
-    print("test?");
+    let some = input("enter: ")::[int];
+    println(some);
     return;
 }

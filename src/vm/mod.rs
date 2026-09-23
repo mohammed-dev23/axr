@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    io::{Write, stdin, stdout},
     sync::{Arc, Mutex},
 };
 
@@ -13,7 +12,7 @@ use crate::{
     compiler::{self},
     value::{
         Function, OptWrapper,
-        Value::{self, Array, Char, Int, Str, Unt, Void},
+        Value::{self, Array, Int, Str, Void},
     },
     vm::InterpretResult::RuntimeError,
 };
@@ -26,7 +25,7 @@ mod opcodes {
     mod cast;
     mod collocations;
     mod control_flow;
-    mod io;
+
     mod stack;
     mod wrappers;
 }

@@ -9,6 +9,7 @@ impl TokenType {
             TokenType::Str => Some(TypeTag::Str),
             TokenType::Char => Some(TypeTag::Char),
             TokenType::Void => Some(TypeTag::None),
+            TokenType::Bool => Some(TypeTag::Bool),
             _ => None,
         }
     }
@@ -27,6 +28,20 @@ impl TypeTag {
             Self::None => 7,
             Self::Array(x) => x.as_bytes(),
             Self::Opt(x) => x.as_bytes(),
+        }
+    }
+
+    pub fn from_bytes(byets: u8) -> TypeTag {
+        match byets {
+            0 => TypeTag::Int,
+            1 => TypeTag::Unt,
+            2 => TypeTag::Float,
+            3 => TypeTag::Str,
+            4 => TypeTag::Char,
+            5 => TypeTag::Bool,
+            6 => TypeTag::Void,
+            7 => TypeTag::None,
+            _ => Void,
         }
     }
 }

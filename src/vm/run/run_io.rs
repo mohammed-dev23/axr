@@ -10,12 +10,6 @@ impl Vm {
                 println!("{}", value);
                 InterpretResult::Ok
             }
-            x if x == OpCode::Print as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                print!("{}", value);
-                InterpretResult::Ok
-            }
-            x if x == OpCode::Input as u8 => self.op_input(),
             _ => NotHandled,
         }
     }

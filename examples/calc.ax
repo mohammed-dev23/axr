@@ -3,9 +3,9 @@ fn main() {
     println(" --basic binary calculater made in Axr-- ");
 
     loop {
-        let n1 : int = input(">1>-enter an num: ");
-        let n2 : int = input(">2>-enter an num: ");
-        let op : str = input(">> enter a op you want to make (+ , - , / , *): ");
+        let n1 : int = input(">1>-enter an num: ")::[int];
+        let n2 : int = input(">2>-enter an num: ")::[int];
+        let op : str = input(">> enter a op you want to make (+ , - , / , *): ")::[str];
 
 
         if n1 == 0 or n2 == 0 or op.trim().is_empty() {
@@ -34,6 +34,6 @@ fn main() {
 
         println("done!");
     }
-}
 
-main();
+    return;
+}

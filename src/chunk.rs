@@ -24,7 +24,6 @@ pub enum OpCode {
     NotEqualTo,
 
     //Normal Functions
-    Print,
     Println,
 
     //Numbers Functions
@@ -38,9 +37,6 @@ pub enum OpCode {
     IsEmpty,
     Trim,
     Reverse,
-
-    //I/O Functions
-    Input,
 
     //Values of the boolean type
     True,

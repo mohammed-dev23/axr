@@ -6,6 +6,7 @@ use std::{
 
 use crate::{
     chunk::Chunk,
+    compiler::TypeTag,
     value::Value::{Array, Bool, Char, Float, Int, Str, Unt},
 };
 
@@ -37,7 +38,7 @@ pub struct Function {
     pub name: String,
 }
 
-pub type Native = fn(arg_count: usize, args: &Value) -> Value;
+pub type Native = fn(arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Value;
 
 impl Function {
     pub fn new() -> Self {

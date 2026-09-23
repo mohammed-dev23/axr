@@ -126,6 +126,7 @@ static RULES: [ParseRule; 66] = [
         infix: Some(Parser::minus_minus_expr),
         precedence: Precedence::Assignment,
     }, // -=
+    NONE_RULE,
     ParseRule {
         prefix: Some(Parser::variable),
         infix: None,
@@ -151,11 +152,6 @@ static RULES: [ParseRule; 66] = [
     NONE_RULE, // ~
     NONE_RULE, // Const
     NONE_RULE, // Fn
-    ParseRule {
-        prefix: Some(Parser::input_expr),
-        infix: None,
-        precedence: Precedence::None,
-    }, // Input
     ParseRule {
         prefix: None,
         infix: Some(Parser::casting),

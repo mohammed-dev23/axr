@@ -8,8 +8,15 @@ impl Vm {
             Value::Function(function) => self.call(function, arg_count),
             Value::NativeFunction(native) => {
                 let native = native.as_ref();
-                let value = native(arg_count, &self.stack[self.stack.len() - arg_count]);
+
+                let value = native(
+                    arg_count,
+                    &self.stack.clone()[self.stack.len() - arg_count],
+                    Some(&TypeTag::from_bytes(self.read_byte())),
+                );
+
                 self.stack.truncate(self.stack.len() - (arg_count + 1));
+
                 self.stack.push(value);
                 InterpretResult::Ok
             }

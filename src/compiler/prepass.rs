@@ -15,9 +15,13 @@ impl Parser {
                 .parameters_type_tag_table
                 .insert(name.to_string(), Rc::new(RefCell::new(parameters.to_vec())));
 
-            self.function_info
-                .return_type_tag_table
-                .insert(name.to_string(), return_type.clone());
+            if let Some(rt) = return_type {
+                self.function_info
+                    .return_type_tag_table
+                    .insert(name.to_string(), rt.clone());
+            } else {
+                continue;
+            }
         }
 
         loop {

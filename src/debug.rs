@@ -35,7 +35,6 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::LessThanEq as u8 => simple_instruction("LessThanEq", offset),
         x if x == OpCode::EqualTo as u8 => simple_instruction("EqualTo", offset),
         x if x == OpCode::NotEqualTo as u8 => simple_instruction("NotEqualTo", offset),
-        x if x == OpCode::Print as u8 => simple_instruction("Print", offset),
         x if x == OpCode::Abs as u8 => simple_instruction("Abs", offset),
         x if x == OpCode::Floor as u8 => simple_instruction("Floor", offset),
         x if x == OpCode::Ceil as u8 => simple_instruction("Round", offset),
@@ -52,7 +51,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::SetLocal as u8 => byte_instruction(chunk, "SetLocal", offset),
         x if x == OpCode::JumpIfFalse as u8 => jump_instruction(chunk, "JumpIfFalse", 1, offset),
         x if x == OpCode::Jump as u8 => jump_instruction(chunk, "JumpIfFalse", 1, offset),
-        x if x == OpCode::Input as u8 => simple_instruction("Input", offset),
+
         x if x == OpCode::Cast as u8 => simple_instruction("Cast", offset),
         x if x == OpCode::Loop as u8 => jump_instruction(chunk, "Loop", -1, offset),
         x if x == OpCode::Println as u8 => simple_instruction("Println", offset),

@@ -48,6 +48,7 @@ pub enum TokenType {
     FatArrowLeft, // =>
     AddAdd,       // +=
     MinusMinus,   // -=
+    DoubleColon,  // ::
 
     //Literals.
     Identifier,
@@ -61,7 +62,6 @@ pub enum TokenType {
     Tilde,
     Const,
     Fn,
-    Input,
     To,
     If,
     Else,
@@ -182,7 +182,13 @@ impl<'s> Scanner<'s> {
             }
             '%' => self.make_token(TokenType::Modulo),
             '"' => self.strings(),
-            ':' => self.make_token(TokenType::Colon),
+            ':' => {
+                if self.match_tokens(':') {
+                    self.make_token(TokenType::DoubleColon)
+                } else {
+                    self.make_token(TokenType::Colon)
+                }
+            }
             x if x.is_numeric() => self.numbers(),
             x if x.is_alphabetic() => self.identifier(),
             '\'' => self.char(),
@@ -348,7 +354,6 @@ impl<'s> Scanner<'s> {
             "bool" => TokenType::Bool,
             "str" => TokenType::Str,
             "char" => TokenType::Char,
-            "input" => TokenType::Input,
             "unt" => TokenType::Unt,
             "to" => TokenType::To,
             "if" => TokenType::If,
