@@ -1,7 +1,8 @@
 use super::*;
 mod io;
+mod math;
 
-pub static NATIVEMETA: [NativeSig; 2] = [
+pub static NATIVEMETA: [NativeSig; 3] = [
     NativeSig {
         name: "print",
         parameters: &[TypeTag::Str],
@@ -11,6 +12,11 @@ pub static NATIVEMETA: [NativeSig; 2] = [
         name: "input",
         parameters: &[TypeTag::Str],
         return_typetag: None,
+    },
+    NativeSig {
+        name: "floor",
+        parameters: &[TypeTag::Float],
+        return_typetag: Some(TypeTag::Float),
     },
 ];
 
@@ -23,5 +29,6 @@ pub struct NativeSig {
 impl Vm {
     pub fn def(&mut self) {
         self.def_io();
+        self.def_math();
     }
 }

@@ -16,11 +16,6 @@ impl Vm {
 
                 InterpretResult::Ok
             }
-            x if x == OpCode::Floor as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                self.stack.push(Value::Float(value.as_float().floor()));
-                InterpretResult::Ok
-            }
             x if x == OpCode::Ceil as u8 => {
                 let value = self.stack.pop().expect(ERR_POP_MES);
                 self.stack.push(Value::Float(value.as_float().ceil()));

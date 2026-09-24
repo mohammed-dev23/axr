@@ -12,7 +12,7 @@ impl Vm {
                 let value = native(
                     arg_count,
                     &self.stack.clone()[self.stack.len() - arg_count],
-                    Some(&TypeTag::from_bytes(self.read_byte())),
+                    self.generic().as_ref(),
                 );
 
                 self.stack.truncate(self.stack.len() - (arg_count + 1));
@@ -54,5 +54,18 @@ impl Vm {
             self.stack.pop().expect(ERR_POP_MES).as_str(),
             self.stack.pop().expect(ERR_POP_MES).clone(),
         );
+    }
+
+    fn generic(&mut self) -> Option<TypeTag> {
+        let bytes = self.read_byte();
+        let generic: Option<TypeTag>;
+
+        if bytes == false as u8 {
+            generic = None;
+        } else {
+            generic = Some(TypeTag::from_bytes(bytes));
+        }
+
+        generic
     }
 }

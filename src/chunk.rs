@@ -28,7 +28,6 @@ pub enum OpCode {
 
     //Numbers Functions
     Abs,
-    Floor,
     Ceil,
     Round,
     SquareRoot,

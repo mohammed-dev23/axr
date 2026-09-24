@@ -18,7 +18,6 @@ impl Parser {
             "sqrt" => self.sqrt_methode(),
             "round" => self.round_methode(),
             "celi" => self.celi_methode(),
-            "floor" => self.floor_methode(),
             "abs" => self.abs_methode(),
             "push" => self.push_methode(scanner),
             "pop" => self.pop_methode(),
@@ -132,22 +131,6 @@ impl Parser {
         }
 
         self.emit_byte(OpCode::Ceil as u8);
-    }
-
-    pub fn floor_methode(&mut self) {
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
-
-        match type_tag {
-            TypeTag::Float => {
-                self.type_tag.push(TypeTag::Float);
-            }
-            _ => self.error(&format!(
-                "cannot use {} for floor, only float values that are allowed",
-                type_tag
-            )),
-        }
-
-        self.emit_byte(OpCode::Floor as u8);
     }
 
     pub fn abs_methode(&mut self) {

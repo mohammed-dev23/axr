@@ -1,5 +1,6 @@
 fn main() {
-    let some = input("enter: ")::[int];
-    println(some);
+    let num : float = 1.9999;
+    let t = floor(num);
+    println(t);
     return;
 }

@@ -145,6 +145,8 @@ impl Parser {
 
         if turbofish {
             self.emit_byte(generic.as_bytes());
+        } else {
+            self.emit_byte(false as u8);
         }
     }
 

@@ -9,7 +9,11 @@ pub fn print(_arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Valu
     Value::Void
 }
 
-pub fn input(_arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Value {
+pub fn input(arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Value {
+    if arg_count > 1 {
+        panic!("input() expect one argument!.");
+    }
+
     let txt = args.as_str();
 
     print!("{}", txt);

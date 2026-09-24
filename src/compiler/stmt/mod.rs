@@ -10,5 +10,3 @@ mod control_flow {
     mod jumping;
     mod looping;
 }
-
-impl Parser {}

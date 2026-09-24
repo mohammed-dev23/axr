@@ -36,7 +36,7 @@ pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
         x if x == OpCode::EqualTo as u8 => simple_instruction("EqualTo", offset),
         x if x == OpCode::NotEqualTo as u8 => simple_instruction("NotEqualTo", offset),
         x if x == OpCode::Abs as u8 => simple_instruction("Abs", offset),
-        x if x == OpCode::Floor as u8 => simple_instruction("Floor", offset),
+
         x if x == OpCode::Ceil as u8 => simple_instruction("Round", offset),
         x if x == OpCode::SquareRoot as u8 => simple_instruction("SquareRoot", offset),
         x if x == OpCode::IsEmpty as u8 => simple_instruction("IsEmpty", offset),
