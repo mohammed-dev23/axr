@@ -1,6 +1,8 @@
 fn main() {
-    let num : float = 1.9999;
-    let t = floor(num);
-    println(t);
+    let data = input("enter some: ")::[int];
+
+    let powed = pow(data to float , 9 to float);
+
+    println(powed);
     return;
 }

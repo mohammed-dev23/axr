@@ -8,12 +8,12 @@ fn main() {
         let op : str = input(">> enter a op you want to make (+ , - , / , *): ")::[str];
 
 
-        if n1 == 0 or n2 == 0 or op.trim().is_empty() {
+        if n1 == 0 or n2 == 0 or is_empty(op) {
             println(">>you have not entered a op kind please try again!");
             skip;
         }
 
-        match op.trim() {
+        match trim(op) {
             "+" => {
                 println(n1 + n2);
             },

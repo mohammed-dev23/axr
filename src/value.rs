@@ -38,7 +38,7 @@ pub struct Function {
     pub name: String,
 }
 
-pub type Native = fn(arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Value;
+pub type Native = fn(arg_count: usize, args: &[Value], generic: Option<&TypeTag>) -> Value;
 
 impl Function {
     pub fn new() -> Self {

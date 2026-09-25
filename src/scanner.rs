@@ -2,6 +2,8 @@
 // it's implemnted in C style which is wrong thing to do in rust
 // more idomic rust is needed the fastrer the better !
 
+use crate::scanner::TokenType::DoubleDot;
+
 pub struct Scanner<'s> {
     start: &'s str,
     current: &'s str,
@@ -49,6 +51,7 @@ pub enum TokenType {
     AddAdd,       // +=
     MinusMinus,   // -=
     DoubleColon,  // ::
+    DoubleDot,    // ..
 
     //Literals.
     Identifier,
@@ -130,7 +133,13 @@ impl<'s> Scanner<'s> {
             ']' => self.make_token(TokenType::RightBracket),
             ';' => self.make_token(TokenType::Semicolon),
             ',' => self.make_token(TokenType::Comma),
-            '.' => self.make_token(TokenType::Dot),
+            '.' => {
+                if self.match_tokens('.') {
+                    self.make_token(DoubleDot)
+                } else {
+                    self.make_token(TokenType::Dot)
+                }
+            }
             '-' => {
                 if self.match_tokens('=') {
                     self.make_token(TokenType::MinusMinus)

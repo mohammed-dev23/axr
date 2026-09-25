@@ -16,32 +16,7 @@ impl Vm {
 
                 InterpretResult::Ok
             }
-            x if x == OpCode::Ceil as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                self.stack.push(Value::Float(value.as_float().ceil()));
-                InterpretResult::Ok
-            }
-            x if x == OpCode::Round as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                self.stack.push(Value::Float(value.as_float().round()));
-                InterpretResult::Ok
-            }
-            x if x == OpCode::SquareRoot as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                self.stack.push(Value::Float(value.as_float().sqrt()));
-                InterpretResult::Ok
-            }
-            x if x == OpCode::IsEmpty as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                self.stack.push(Value::Bool(value.as_str().is_empty()));
-                InterpretResult::Ok
-            }
-            x if x == OpCode::Trim as u8 => {
-                let value = self.stack.pop().expect(ERR_POP_MES);
-                self.stack
-                    .push(Value::Str(Arc::from(value.as_str().trim())));
-                InterpretResult::Ok
-            }
+
             x if x == OpCode::Grab as u8 => self.op_grab(),
             _ => NotHandled,
         }

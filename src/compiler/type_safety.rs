@@ -16,37 +16,6 @@ impl TokenType {
 }
 
 impl TypeTag {
-    pub fn as_bytes(&self) -> u8 {
-        match self {
-            Self::Int => 0,
-            Self::Unt => 1,
-            Self::Float => 2,
-            Self::Str => 3,
-            Self::Char => 4,
-            Self::Bool => 5,
-            Self::Void => 6,
-            Self::None => 7,
-            Self::Array(x) => x.as_bytes(),
-            Self::Opt(x) => x.as_bytes(),
-        }
-    }
-
-    pub fn from_bytes(byets: u8) -> TypeTag {
-        match byets {
-            0 => TypeTag::Int,
-            1 => TypeTag::Unt,
-            2 => TypeTag::Float,
-            3 => TypeTag::Str,
-            4 => TypeTag::Char,
-            5 => TypeTag::Bool,
-            6 => TypeTag::Void,
-            7 => TypeTag::None,
-            _ => Void,
-        }
-    }
-}
-
-impl TypeTag {
     pub fn extract(self) -> Arc<TypeTag> {
         match self {
             Self::Array(x) => x,
@@ -76,6 +45,7 @@ impl fmt::Display for TypeTag {
             TypeTag::None => write!(f, "None"),
             TypeTag::Opt(x) => write!(f, "{}", x),
             TypeTag::Array(x) => write!(f, "Array[{}]", x),
+            TypeTag::Nai => write!(f, "nai!"),
         }
     }
 }
@@ -136,5 +106,23 @@ impl Parser {
 
         self.consume(TokenType::RightBracket, "Exp", scanner);
         array
+    }
+
+    pub fn add_type_tag_to_chunk(&mut self, type_tag: TypeTag) -> u8 {
+        // we cap the curent chunk so we can acc typetag
+        let chunk = self.current_chunk();
+
+        // we check if the type tags postion does already exsist and if it does we return it
+        if let Some(idx) = chunk.type_tag.iter().position(|t| t == &type_tag) {
+            return idx as u8;
+        }
+
+        // if it doesn't exsist we push the typetag
+        chunk.type_tag.push(type_tag);
+        // this is pasicly what push does, the index of the pused value
+        (chunk.type_tag.len() - 1) as u8
+
+        // we return those idxs so we can emit them later!.
+        // we need those idxs to index in the typetag stack and get the value we need.
     }
 }

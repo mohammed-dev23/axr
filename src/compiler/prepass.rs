@@ -13,7 +13,7 @@ impl Parser {
 
             self.function_info
                 .parameters_type_tag_table
-                .insert(name.to_string(), Rc::new(RefCell::new(parameters.to_vec())));
+                .insert(name.to_string(), Rc::new(parameters.to_vec()));
 
             if let Some(rt) = return_type {
                 self.function_info
@@ -129,14 +129,13 @@ impl Parser {
                 }
             }
 
-            self.function_info.parameters_type_tag_table.insert(
-                function_name.to_string(),
-                Rc::new(RefCell::new(stack.clone())),
-            );
+            self.function_info
+                .parameters_type_tag_table
+                .insert(function_name.to_string(), Rc::new(stack.clone()));
         } else {
             self.function_info
                 .parameters_type_tag_table
-                .insert(function_name.to_string(), Rc::new(RefCell::new(Vec::new())));
+                .insert(function_name.to_string(), Rc::new(Vec::new()));
         }
 
         self.consume(

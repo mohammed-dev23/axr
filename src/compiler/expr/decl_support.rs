@@ -59,7 +59,9 @@ impl Parser {
         }
 
         self.emit_byte(OpCode::Cast as u8);
-        self.emit_byte(target.as_bytes());
+
+        let idx = self.add_type_tag_to_chunk(target.clone());
+        self.emit_byte(idx);
 
         self.type_tag.push(target);
     }

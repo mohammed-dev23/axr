@@ -12,12 +12,7 @@ impl Parser {
 
         self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
         match methode_name.trim() {
-            "trim" => self.trim_methode(),
-            "is_empty" => self.isempty_methode(),
             "rev" => self.rev_methode(),
-            "sqrt" => self.sqrt_methode(),
-            "round" => self.round_methode(),
-            "celi" => self.celi_methode(),
             "abs" => self.abs_methode(),
             "push" => self.push_methode(scanner),
             "pop" => self.pop_methode(),
@@ -28,38 +23,6 @@ impl Parser {
             }
         }
         self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
-    }
-
-    pub fn trim_methode(&mut self) {
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
-
-        match type_tag {
-            TypeTag::Str => {
-                self.type_tag.push(TypeTag::Str);
-            }
-            _ => self.error(&format!(
-                "cannot use {} for trim, only str values that are allowed",
-                type_tag
-            )),
-        }
-
-        self.emit_byte(OpCode::Trim as u8);
-    }
-
-    pub fn isempty_methode(&mut self) {
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
-
-        match type_tag {
-            TypeTag::Str => {
-                self.type_tag.push(TypeTag::Bool);
-            }
-            _ => self.error(&format!(
-                "cannot use {} for is_empty, only str values that are allowed",
-                type_tag
-            )),
-        }
-
-        self.emit_byte(OpCode::IsEmpty as u8);
     }
 
     pub fn rev_methode(&mut self) {
@@ -83,54 +46,6 @@ impl Parser {
         }
 
         self.emit_byte(OpCode::Reverse as u8);
-    }
-
-    pub fn sqrt_methode(&mut self) {
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
-
-        match type_tag {
-            TypeTag::Float => {
-                self.type_tag.push(TypeTag::Float);
-            }
-            _ => self.error(&format!(
-                "cannot use {} for round, only float values that are allowed",
-                type_tag
-            )),
-        }
-
-        self.emit_byte(OpCode::SquareRoot as u8);
-    }
-
-    pub fn round_methode(&mut self) {
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
-
-        match type_tag {
-            TypeTag::Float => {
-                self.type_tag.push(TypeTag::Float);
-            }
-            _ => self.error(&format!(
-                "cannot use {} for round, only float values that are allowed",
-                type_tag
-            )),
-        }
-
-        self.emit_byte(OpCode::Round as u8);
-    }
-
-    pub fn celi_methode(&mut self) {
-        let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
-
-        match type_tag {
-            TypeTag::Float => {
-                self.type_tag.push(TypeTag::Float);
-            }
-            _ => self.error(&format!(
-                "cannot use {} for ceil, only float values that are allowed",
-                type_tag
-            )),
-        }
-
-        self.emit_byte(OpCode::Ceil as u8);
     }
 
     pub fn abs_methode(&mut self) {

@@ -193,7 +193,8 @@ impl Parser {
         }
 
         self.emit_byte(OpCode::AddAdd as u8);
-        self.emit_byte(type_tag_lhs.as_bytes());
+        let idx = self.add_type_tag_to_chunk(type_tag_lhs);
+        self.emit_byte(idx);
 
         if let Some(x) = self.info.last_local_slot {
             self.emit_bytes(OpCode::SetLocal as u8, x);
@@ -239,7 +240,9 @@ impl Parser {
         }
 
         self.emit_byte(OpCode::MinusMinus as u8);
-        self.emit_byte(type_tag_lhs.as_bytes());
+
+        let idx = self.add_type_tag_to_chunk(type_tag_lhs);
+        self.emit_byte(idx);
 
         if let Some(x) = self.info.last_local_slot {
             self.emit_bytes(OpCode::SetLocal as u8, x);

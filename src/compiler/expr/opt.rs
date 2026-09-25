@@ -15,8 +15,11 @@ impl Parser {
         let Some(outer) = outer_expected else {
             self.error("Some(...) needs a type context, e.g. `let x : Opt[int] = Some(5);`");
             self.emit_byte(OpCode::Some as u8);
-            self.emit_byte(type_tag.as_bytes());
+
+            let idx = self.add_type_tag_to_chunk(type_tag.clone());
+            self.emit_byte(idx);
             self.type_tag.push(TypeTag::Opt(type_tag.extract()));
+
             return;
         };
 
@@ -31,7 +34,8 @@ impl Parser {
 
         let res_type = TypeTag::Opt(type_tag.extract());
         self.emit_byte(OpCode::Some as u8);
-        self.emit_byte(res_type.as_bytes());
+        let idx = self.add_type_tag_to_chunk(res_type.clone());
+        self.emit_byte(idx);
         self.type_tag.push(res_type);
     }
 }

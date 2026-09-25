@@ -193,4 +193,15 @@ impl Vm {
 
         InterpretResult::RuntimeError
     }
+
+    pub fn get_type(&mut self) -> &TypeTag {
+        // we read the index that has been emited by the compiler
+        let idx = self.read_byte();
+
+        // we index in the type tag stack and return the value
+        &self.frames.frames[self.frames.frame_count - 1]
+            .function
+            .chunk
+            .type_tag[idx as usize]
+    }
 }

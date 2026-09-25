@@ -1,6 +1,7 @@
 pub use crate::value::Value;
 pub mod io;
 pub mod math;
+pub mod string;
 
 use crate::compiler::TypeTag;
 use crate::value::Value::{Char, Int, Str, Unt, Void};

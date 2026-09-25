@@ -144,9 +144,11 @@ impl Parser {
         self.emit_bytes(OpCode::Call as u8, arg_count as u8);
 
         if turbofish {
-            self.emit_byte(generic.as_bytes());
+            let idx = self.add_type_tag_to_chunk(generic);
+            self.emit_byte(idx);
         } else {
-            self.emit_byte(false as u8);
+            let idx = self.add_type_tag_to_chunk(TypeTag::Nai);
+            self.emit_byte(idx);
         }
     }
 
@@ -160,7 +162,7 @@ impl Parser {
         let stack = table
             .get(functions_name)
             .expect("Expected function found nothing.")
-            .borrow_mut();
+            .as_ref();
 
         loop {
             if !self.check(&RigtParen) {
@@ -215,7 +217,7 @@ impl Parser {
         let expected_return_type = match self
             .function_info
             .return_type_tag_table
-            .get(&self.prevprev.start)
+            .get(functions_name)
             .cloned()
         {
             Some(x) => x,

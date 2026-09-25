@@ -1,4 +1,7 @@
-use crate::value::{Value, ValueArray};
+use crate::{
+    compiler::TypeTag,
+    value::{Value, ValueArray},
+};
 
 #[repr(u8)]
 pub enum OpCode {
@@ -28,13 +31,8 @@ pub enum OpCode {
 
     //Numbers Functions
     Abs,
-    Ceil,
-    Round,
-    SquareRoot,
 
     //Strings Functions
-    IsEmpty,
-    Trim,
     Reverse,
 
     //Values of the boolean type
@@ -86,6 +84,7 @@ pub enum OpCode {
 pub struct Chunk {
     pub code: Vec<u8>,
     pub constants: ValueArray,
+    pub type_tag: Vec<TypeTag>,
     pub line: Vec<u32>,
 }
 
@@ -95,6 +94,7 @@ impl Chunk {
         Self {
             code: Vec::new(),
             constants: ValueArray::new(),
+            type_tag: Vec::new(),
             line: Vec::new(),
         }
     }

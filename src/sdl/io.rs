@@ -1,20 +1,20 @@
 use super::*;
 
-pub fn print(_arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Value {
+pub fn print(_arg_count: usize, args: &[Value], generic: Option<&TypeTag>) -> Value {
     if generic.is_some_and(|t| t != &TypeTag::Void) {
         panic!("print does not expect a turbofish or a generic specifier!")
     }
 
-    print!("{}", args);
+    print!("{}", args[0]);
     Value::Void
 }
 
-pub fn input(arg_count: usize, args: &Value, generic: Option<&TypeTag>) -> Value {
+pub fn input(arg_count: usize, args: &[Value], generic: Option<&TypeTag>) -> Value {
     if arg_count > 1 {
         panic!("input() expect one argument!.");
     }
 
-    let txt = args.as_str();
+    let txt = args[0].as_str();
 
     print!("{}", txt);
     stdout().flush().unwrap();

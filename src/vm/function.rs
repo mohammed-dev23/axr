@@ -11,8 +11,8 @@ impl Vm {
 
                 let value = native(
                     arg_count,
-                    &self.stack.clone()[self.stack.len() - arg_count],
-                    self.generic().as_ref(),
+                    &self.stack.clone()[self.stack.len() - arg_count..],
+                    self.generic(),
                 );
 
                 self.stack.truncate(self.stack.len() - (arg_count + 1));
@@ -56,16 +56,13 @@ impl Vm {
         );
     }
 
-    fn generic(&mut self) -> Option<TypeTag> {
-        let bytes = self.read_byte();
-        let generic: Option<TypeTag>;
+    fn generic(&mut self) -> Option<&TypeTag> {
+        let generic = self.get_type();
 
-        if bytes == false as u8 {
-            generic = None;
-        } else {
-            generic = Some(TypeTag::from_bytes(bytes));
+        if generic == &TypeTag::Nai {
+            return None;
         }
 
-        generic
+        Some(generic)
     }
 }
