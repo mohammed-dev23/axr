@@ -112,4 +112,35 @@ impl Vm {
         }
         InterpretResult::Ok
     }
+
+    pub fn op_range(&mut self) -> InterpretResult {
+        let rhs_value = self.stack.pop().expect(ERR_POP_MES);
+        let lhs_value = self.stack.pop().expect(ERR_POP_MES);
+        let type_tag = self.get_type();
+
+        match type_tag {
+            t if t == &TypeTag::Range(Arc::new(TypeTag::Int)) => {
+                self.stack.push(Value::Range(RangeType::RangeInt(
+                    lhs_value.as_int()..rhs_value.as_int(),
+                )));
+
+                InterpretResult::Ok
+            }
+            t if t == &TypeTag::Range(Arc::new(TypeTag::Unt)) => {
+                self.stack.push(Value::Range(RangeType::RangeUnt(
+                    lhs_value.as_unt()..rhs_value.as_unt(),
+                )));
+
+                InterpretResult::Ok
+            }
+            t if t == &TypeTag::Range(Arc::new(TypeTag::Float)) => {
+                self.stack.push(Value::Range(RangeType::RangeFloat(
+                    lhs_value.as_float()..rhs_value.as_float(),
+                )));
+
+                InterpretResult::Ok
+            }
+            _ => RuntimeError,
+        }
+    }
 }

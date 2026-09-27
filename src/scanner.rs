@@ -94,6 +94,7 @@ pub enum TokenType {
     Opt,
     Some,
     None,
+    Range,
 
     //Other
     Error,
@@ -381,6 +382,7 @@ impl<'s> Scanner<'s> {
             "Some" => TokenType::Some,
             "None" => TokenType::None,
             "return" => TokenType::Return,
+            "Range" => TokenType::Range,
             _ => TokenType::Identifier,
         }
     }

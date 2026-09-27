@@ -60,6 +60,7 @@ pub enum OpCode {
     NewArray,
     Push,
     PopArray,
+    Range,
 
     //Measurement Functions
     Len,

@@ -18,7 +18,7 @@ use crate::{
 pub const TYPETAG_ERR: &str = "TypeTag stack underflow — compiler emitted unbalanced typetags";
 
 pub use TypeTag::Void;
-use std::{collections::HashMap, fmt, rc::Rc, sync::Arc};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc, sync::Arc};
 
 pub struct Parser {
     pub(in crate::compiler) current: Token,
@@ -51,7 +51,7 @@ pub struct Functions {
 }
 
 pub struct FunctionInfo {
-    parameters_type_tag_table: HashMap<String, Rc<Vec<TypeTag>>>,
+    parameters_type_tag_table: HashMap<String, Rc<RefCell<Vec<TypeTag>>>>,
     return_type_tag_table: HashMap<String, TypeTag>,
 }
 
@@ -85,6 +85,8 @@ pub enum TypeTag {
     None,
     Array(Arc<TypeTag>),
     Opt(Arc<TypeTag>),
+    Range(Arc<TypeTag>),
+    Generic,
 
     #[default]
     Nai,

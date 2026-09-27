@@ -1,6 +1,5 @@
-use crate::scanner::TokenType::RigtParen;
-
 use super::*;
+use crate::scanner::TokenType::RigtParen;
 
 impl Parser {
     pub fn function(
@@ -158,6 +157,7 @@ impl Parser {
         let mut type_tag = TypeTag::Void;
         let functions_name = &self.prevprev.start.clone();
         let table = self.function_info.parameters_type_tag_table.clone();
+        let mut generic_param = TypeTag::Void;
 
         let stack = table
             .get(functions_name)
@@ -170,9 +170,23 @@ impl Parser {
 
                 let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
-                let expected_type_tag = stack.get(arg_count).expect(TYPETAG_ERR);
+                let mut expected_type_tag = {
+                    let expected_stack = stack.borrow();
+                    expected_stack.get(arg_count).cloned().expect(TYPETAG_ERR)
+                };
 
-                if &type_tag != expected_type_tag {
+                if expected_type_tag == TypeTag::Generic {
+                    let idx = stack.borrow().iter().position(|t| t == &expected_type_tag);
+
+                    if let Some(idx) = idx {
+                        stack.borrow_mut()[idx] = type_tag.clone();
+                    }
+
+                    expected_type_tag = type_tag.clone();
+                    generic_param = type_tag.clone();
+                }
+
+                if type_tag != expected_type_tag {
                     self.error(&format!(
                         "Mismatched types expected [{}] found [{}]",
                         expected_type_tag, type_tag
@@ -190,6 +204,17 @@ impl Parser {
             } else {
                 break;
             }
+        }
+
+        if self
+            .function_info
+            .return_type_tag_table
+            .get(functions_name)
+            .is_some_and(|t| t == &TypeTag::Generic)
+        {
+            self.function_info
+                .return_type_tag_table
+                .insert(functions_name.clone(), generic_param.clone());
         }
 
         self.consume(RigtParen, "Expect ')' after arguments", scanner);

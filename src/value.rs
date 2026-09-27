@@ -1,6 +1,6 @@
 use std::{
     fmt::{self},
-    ops::Neg,
+    ops::{Neg, Range},
     sync::{Arc, Mutex},
 };
 
@@ -22,7 +22,17 @@ pub enum Value {
     Opt(OptWrapper),
     Function(Arc<Function>),
     NativeFunction(Arc<Native>),
+    Range(RangeType),
+
     Void,
+}
+
+#[derive(Debug, Clone)]
+#[allow(warnings)]
+pub enum RangeType {
+    RangeInt(Range<i64>),
+    RangeUnt(Range<u64>),
+    RangeFloat(Range<f64>),
 }
 
 #[derive(Debug, Clone)]
@@ -100,6 +110,13 @@ impl Value {
             _ => false,
         }
     }
+
+    pub fn is_range(&self) -> bool {
+        match self {
+            Self::Range(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[allow(warnings)]
@@ -173,6 +190,36 @@ impl Value {
             _ => None,
         }
     }
+
+    pub fn as_range(self) -> Option<RangeType> {
+        match self {
+            Self::Range(x) => Some(x),
+            _ => None,
+        }
+    }
+}
+
+impl RangeType {
+    pub fn as_int_range(self) -> Option<Range<i64>> {
+        match self {
+            Self::RangeInt(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_unt_range(self) -> Option<Range<u64>> {
+        match self {
+            Self::RangeUnt(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn as_float_range(self) -> Option<Range<f64>> {
+        match self {
+            Self::RangeFloat(x) => Some(x),
+            _ => None,
+        }
+    }
 }
 
 impl Value {
@@ -227,6 +274,7 @@ impl fmt::Display for Value {
             Value::Function(x) => write!(f, "{:?}", x),
             Value::NativeFunction(x) => write!(f, "{:?}", x),
             Value::Void => write!(f, "Void"),
+            Value::Range(x) => write!(f, "{:?}", x),
         }
     }
 }

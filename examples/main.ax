@@ -1,3 +1,9 @@
 fn main() {
+    println(test("lala"));
     return;
+}
+
+fn test(some : str) -> str {
+    println(some);
+    return some;
 }

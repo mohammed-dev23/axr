@@ -121,4 +121,32 @@ impl Parser {
         self.emit_constant(Value::Char(into_chars[0]));
         self.type_tag.push(TypeTag::Char);
     }
+
+    pub fn range(&mut self, scanner: &mut Scanner) {
+        let lhs_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
+
+        self.expression(scanner);
+
+        let rhs_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
+
+        if lhs_typetag != rhs_typetag {
+            self.error(&format!(
+                "Expected '{}' due to '{}'",
+                lhs_typetag, lhs_typetag
+            ));
+        }
+
+        let range_type = match (lhs_typetag, rhs_typetag) {
+            (TypeTag::Int, TypeTag::Int) => TypeTag::Range(Arc::new(TypeTag::Int)),
+            (TypeTag::Unt, TypeTag::Unt) => TypeTag::Range(Arc::new(TypeTag::Unt)),
+            (TypeTag::Float, TypeTag::Float) => TypeTag::Range(Arc::new(TypeTag::Float)),
+            _ => return self.error("Unexpected range type!"),
+        };
+
+        self.emit_byte(OpCode::Range as u8);
+
+        self.type_tag.push(range_type.clone());
+        let idx = self.add_type_tag_to_chunk(range_type);
+        self.emit_byte(idx);
+    }
 }

@@ -79,6 +79,26 @@ impl Parser {
             TypeTag::Opt(Arc::new(Void))
         };
 
+        let range = if annotation_type.is_some_and(|t| t == TokenType::Range) {
+            self.consume(TokenType::LeftBracket, "Expected '['", scanner);
+
+            self.advance(scanner);
+            let type_tag = self.previous.token_type;
+
+            self.consume(TokenType::RightBracket, "Expected ']'", scanner);
+
+            let range = match &type_tag {
+                TokenType::Int => TypeTag::Range(Arc::new(TypeTag::Int)),
+                TokenType::Unt => TypeTag::Range(Arc::new(TypeTag::Unt)),
+                TokenType::Float => TypeTag::Range(Arc::new(TypeTag::Float)),
+                _ => return self.error(&format!("Unexpected Range type '{:?}' ", &type_tag)),
+            };
+
+            range
+        } else {
+            TypeTag::Range(Arc::new(Void))
+        };
+
         self.expected_type = annotation_type.map(|t| match t {
             TokenType::Int => TypeTag::Int,
             TokenType::Str => TypeTag::Str,
@@ -88,6 +108,7 @@ impl Parser {
             TokenType::Unt => TypeTag::Unt,
             TokenType::Array => array.clone(),
             TokenType::Opt => opt.clone(),
+            TokenType::Range => range.clone(),
             _ => TypeTag::Void,
         });
 
@@ -129,6 +150,14 @@ impl Parser {
                                 array, type_tag
                             ));
                         }
+                    }
+                }
+                TokenType::Range => {
+                    if type_tag != range {
+                        self.error(&format!(
+                            "Mismatched types, expected [{}] found [{}]",
+                            range, type_tag
+                        ));
                     }
                 }
                 _ => self.type_check(&type_tag, &token, is_array, is_opt),

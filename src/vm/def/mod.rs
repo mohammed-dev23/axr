@@ -1,9 +1,10 @@
 use super::*;
 mod io;
 mod math;
+mod rand;
 mod string;
 
-pub static NATIVEMETA: [NativeSig; 9] = [
+pub static NATIVEMETA: [NativeSig; 10] = [
     NativeSig {
         name: "print",
         parameters: &[TypeTag::Str],
@@ -49,6 +50,11 @@ pub static NATIVEMETA: [NativeSig; 9] = [
         parameters: &[TypeTag::Float, TypeTag::Float],
         return_typetag: Some(TypeTag::Float),
     },
+    NativeSig {
+        name: "random_from",
+        parameters: &[TypeTag::Generic],
+        return_typetag: None,
+    },
 ];
 
 pub struct NativeSig {
@@ -62,5 +68,6 @@ impl Vm {
         self.def_io();
         self.def_math();
         self.def_string();
+        self.def_rand();
     }
 }

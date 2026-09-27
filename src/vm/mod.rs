@@ -11,7 +11,7 @@ use crate::{
     compiler::TypeTag,
     compiler::{self},
     value::{
-        Function, OptWrapper,
+        Function, OptWrapper, RangeType,
         Value::{self, Array, Int, Str, Void},
     },
     vm::InterpretResult::RuntimeError,

@@ -8,3 +8,5 @@ DTE = []
 DPC = []
 
 [dependencies]
+# needs to be removed later and build my own!
+rand = "0.10.3"

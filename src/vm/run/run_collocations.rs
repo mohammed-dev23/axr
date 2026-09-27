@@ -15,6 +15,7 @@ impl Vm {
             x if x == OpCode::PopArray as u8 => self.op_pop_array(),
             x if x == OpCode::Len as u8 => self.op_len(),
             x if x == OpCode::Reverse as u8 => self.op_reverse(),
+            x if x == OpCode::Range as u8 => self.op_range(),
             _ => NotHandled,
         }
     }

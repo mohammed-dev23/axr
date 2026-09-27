@@ -1,3 +1,5 @@
+use crate::value::OptWrapper;
+
 use super::*;
 
 impl TokenType {
@@ -15,11 +17,47 @@ impl TokenType {
     }
 }
 
+impl Value {
+    pub fn as_typetag(&self) -> Option<TypeTag> {
+        match self {
+            Value::Int(_) => Some(TypeTag::Int),
+            Value::Unt(_) => Some(TypeTag::Unt),
+            Value::Float(_) => Some(TypeTag::Float),
+            Value::Bool(_) => Some(TypeTag::Bool),
+            Value::Char(_) => Some(TypeTag::Char),
+            Value::Str(_) => Some(TypeTag::Str),
+            Value::Opt(x) => Some(TypeTag::Opt(Arc::new(match x {
+                OptWrapper::Some(x) => x.as_typetag().unwrap(),
+                OptWrapper::None => TypeTag::None,
+            }))),
+            Value::Array(x) => Some(TypeTag::Array(Arc::new({
+                let mut typetag = TypeTag::Void;
+
+                let x = x.clone();
+
+                for i in x.lock().as_deref().unwrap() {
+                    typetag = i.as_typetag().unwrap();
+                }
+
+                typetag
+            }))),
+            Value::Range(x) => Some(TypeTag::Range(Arc::new(match x {
+                crate::value::RangeType::RangeFloat(_) => TypeTag::Float,
+                crate::value::RangeType::RangeInt(_) => TypeTag::Int,
+                crate::value::RangeType::RangeUnt(_) => TypeTag::Unt,
+            }))),
+            Value::Void => Some(TypeTag::Void),
+            _ => None,
+        }
+    }
+}
+
 impl TypeTag {
     pub fn extract(self) -> Arc<TypeTag> {
         match self {
             Self::Array(x) => x,
             Self::Opt(x) => x,
+            Self::Range(x) => x,
             _ => Arc::new(Void),
         }
     }
@@ -43,8 +81,10 @@ impl fmt::Display for TypeTag {
             TypeTag::Char => write!(f, "char"),
             TypeTag::Unt => write!(f, "unt"),
             TypeTag::None => write!(f, "None"),
-            TypeTag::Opt(x) => write!(f, "{}", x),
+            TypeTag::Opt(x) => write!(f, "Opt[{}]", x),
             TypeTag::Array(x) => write!(f, "Array[{}]", x),
+            TypeTag::Range(x) => write!(f, "Range[{}]", x),
+            TypeTag::Generic => write!(f, "generic"),
             TypeTag::Nai => write!(f, "nai!"),
         }
     }
