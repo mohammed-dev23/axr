@@ -1,9 +1,18 @@
-fn main() {
-    println(test("lala"));
-    return;
-}
+const TEST : str = "just a test";
 
-fn test(some : str) -> str {
-    println(some);
-    return some;
+fn main() {
+    let x =  1..10;
+
+    let any = (999 * 100) / 9 - (9 % 6);
+
+    let z = -any;
+    println(z);
+
+    let ~p = 10;
+    p += any;
+    println(p);
+
+    println(x);
+    println(TEST);
+    return;
 }

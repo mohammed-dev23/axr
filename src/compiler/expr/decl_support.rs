@@ -1,3 +1,5 @@
+use crate::compiler::Expr::NoneExpr;
+
 use super::*;
 
 impl Parser {
@@ -29,7 +31,7 @@ impl Parser {
         self.const_table.insert(name, (value, type_tag.clone()));
     }
 
-    pub fn casting(&mut self, scanner: &mut Scanner) {
+    pub fn casting(&mut self, _lhs: &Expr, scanner: &mut Scanner) -> Expr {
         let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         self.advance(scanner);
@@ -64,5 +66,7 @@ impl Parser {
         self.emit_byte(idx);
 
         self.type_tag.push(target);
+
+        NoneExpr
     }
 }

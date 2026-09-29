@@ -20,8 +20,8 @@ pub enum Precedence {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ParseRule {
-    pub prefix: Option<fn(&mut Parser, &mut Scanner, bool)>,
-    pub infix: Option<fn(&mut Parser, &mut Scanner)>,
+    pub prefix: Option<fn(&mut Parser, &mut Scanner, bool) -> Expr>,
+    pub infix: Option<fn(&mut Parser, &Expr, &mut Scanner) -> Expr>,
     pub precedence: Precedence,
 }
 
@@ -227,17 +227,19 @@ impl Parser {
         RULES[token_type as usize]
     }
 
-    pub fn parse_precedence(&mut self, precedence: Precedence, scanner: &mut Scanner) {
+    pub fn parse_precedence(&mut self, precedence: Precedence, scanner: &mut Scanner) -> Expr {
+        let mut left: Expr;
+
         self.advance(scanner);
 
         let rule = Self::get_rule(self.previous.token_type);
         let can_assign = precedence <= Precedence::Assignment;
 
         if let Some(prefix) = rule.prefix {
-            prefix(self, scanner, can_assign);
+            left = prefix(self, scanner, can_assign);
         } else {
             self.error("Expect expression.");
-            return;
+            return Expr::NoneExpr;
         }
 
         if can_assign && self.match_consume(&TokenType::Equal, scanner) {
@@ -249,7 +251,9 @@ impl Parser {
 
             self.advance(scanner);
             let infix_rule = Self::get_rule(self.previous.token_type).infix.unwrap();
-            infix_rule(self, scanner);
+            left = infix_rule(self, &left, scanner);
         }
+
+        left
     }
 }

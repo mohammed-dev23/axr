@@ -1,7 +1,9 @@
+use crate::compiler::Expr::NoneExpr;
+
 use super::*;
 
 impl Parser {
-    pub fn some_expr(&mut self, scanner: &mut Scanner, _can_assign: bool) {
+    pub fn some_expr(&mut self, scanner: &mut Scanner, _can_assign: bool) -> Expr {
         let outer_expected = self.expected_type.take();
         self.expected_type = outer_expected.clone().map(|w| w.extract().as_ref().clone());
 
@@ -20,7 +22,7 @@ impl Parser {
             self.emit_byte(idx);
             self.type_tag.push(TypeTag::Opt(type_tag.extract()));
 
-            return;
+            return NoneExpr;
         };
 
         let expected_inner = outer.extract().as_ref().clone();
@@ -37,5 +39,6 @@ impl Parser {
         let idx = self.add_type_tag_to_chunk(res_type.clone());
         self.emit_byte(idx);
         self.type_tag.push(res_type);
+        NoneExpr
     }
 }

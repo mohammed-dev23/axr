@@ -1,7 +1,9 @@
+use crate::compiler::Expr::NoneExpr;
+
 use super::*;
 
 impl Parser {
-    pub fn array(&mut self, scanner: &mut Scanner, _can_assign: bool) {
+    pub fn array(&mut self, scanner: &mut Scanner, _can_assign: bool) -> Expr {
         let mut array_len = 0;
 
         if self.check(&TokenType::RightBracket) {
@@ -12,8 +14,9 @@ impl Parser {
                 TypeTag::Array(Arc::new(Void))
             });
 
-            self.emit_byte(OpCode::NewArray as u8);
             self.type_tag.push(expected_type);
+
+            Expr::Array { len: 0 }
         } else {
             if self.check(&TokenType::LeftBracket) {
                 let (array, mut type_tag) = self.parse_nasted(scanner);
@@ -33,12 +36,13 @@ impl Parser {
                 scanner,
             );
 
-            self.emit_byte(OpCode::Array as u8);
-            self.emit_byte(array_len as u8);
+            Expr::Array {
+                len: array_len as u8,
+            }
         }
     }
 
-    pub fn index_array(&mut self, scanner: &mut Scanner) {
+    pub fn index_array(&mut self, _lhs: &Expr, scanner: &mut Scanner) -> Expr {
         self.expression(scanner);
         let type_tag = self.type_tag.last().expect(TYPETAG_ERR);
 
@@ -56,6 +60,7 @@ impl Parser {
         );
 
         self.emit_byte(OpCode::IndexArray as u8);
+        NoneExpr
     }
 
     fn parse_array(&mut self, scanner: &mut Scanner) -> (usize, Vec<TypeTag>) {

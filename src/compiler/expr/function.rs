@@ -138,7 +138,7 @@ impl Parser {
         self.emit_bytes(OpCode::Constant as u8, function_value);
     }
 
-    pub fn call(&mut self, scanner: &mut Scanner) {
+    pub fn call(&mut self, _lhs: &Expr, scanner: &mut Scanner) -> Expr {
         let (arg_count, turbofish, generic) = self.argument_list(scanner);
         self.emit_bytes(OpCode::Call as u8, arg_count as u8);
 
@@ -149,6 +149,8 @@ impl Parser {
             let idx = self.add_type_tag_to_chunk(TypeTag::Nai);
             self.emit_byte(idx);
         }
+
+        Expr::NoneExpr
     }
 
     pub fn argument_list(&mut self, scanner: &mut Scanner) -> (usize, bool, TypeTag) {

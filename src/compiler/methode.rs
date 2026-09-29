@@ -1,10 +1,12 @@
+use crate::compiler::Expr::NoneExpr;
+
 use super::*;
 
 impl Parser {
-    pub fn methode(&mut self, scanner: &mut Scanner) {
+    pub fn methode(&mut self, _lhs: &Expr, scanner: &mut Scanner) -> Expr {
         if self.compiler.scope_depth == 0 {
             self.error("Statement must be insaid a fn body");
-            return;
+            return NoneExpr;
         }
 
         self.consume(TokenType::Identifier, "expected methode name", scanner);
@@ -23,6 +25,7 @@ impl Parser {
             }
         }
         self.consume(TokenType::RigtParen, "Expect ')' after value.", scanner);
+        NoneExpr
     }
 
     pub fn rev_methode(&mut self) {

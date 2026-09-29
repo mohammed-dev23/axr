@@ -1,37 +1,45 @@
+use crate::compiler::Expr::{Grouping, NoneExpr};
+
 use super::*;
 
 impl Parser {
-    pub fn grouping(&mut self, scanner: &mut Scanner, _can_assign: bool) {
-        self.expression(scanner);
+    pub fn grouping(&mut self, scanner: &mut Scanner, _can_assign: bool) -> Expr {
+        let inner = self.parse_precedence(Precedence::Assignment, scanner);
+
         self.consume(
             TokenType::RigtParen,
             "Expect ')' after expression.",
             scanner,
         );
+
+        Grouping(Box::new(inner))
     }
 
-    pub fn variable(&mut self, scanner: &mut Scanner, can_assign: bool) {
+    pub fn variable(&mut self, scanner: &mut Scanner, can_assign: bool) -> Expr {
         let token = &self.previous.clone();
-        self.named_variable(token, scanner, can_assign);
+        self.named_variable(token, scanner, can_assign)
     }
 
-    pub fn named_variable(&mut self, name: &Token, scanner: &mut Scanner, can_assign: bool) {
+    pub fn named_variable(
+        &mut self,
+        name: &Token,
+        scanner: &mut Scanner,
+        can_assign: bool,
+    ) -> Expr {
         if let Some((value, type_tag)) = self.const_table.get(&name.start).cloned() {
-            self.emit_constant(value);
             self.type_tag.push(type_tag);
-            return;
+            return Expr::Const(value);
         }
 
         let Some((arg, is_mut, type_tag)) = self.resolve_local(name) else {
             let slot = self.identifier_constant(name);
-            self.emit_bytes(OpCode::GetGlobal as u8, slot);
-            return;
+            return Expr::Global { slot };
         };
 
         self.info.is_mut.push(is_mut);
 
         if can_assign && is_mut && self.match_consume(&TokenType::Equal, scanner) {
-            self.expression(scanner);
+            let rhs = self.parse_precedence(Precedence::Assignment, scanner);
 
             let rhs_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
 
@@ -42,90 +50,101 @@ impl Parser {
                 ));
             }
 
-            self.emit_bytes(OpCode::SetLocal as u8, arg);
+            Expr::Assign {
+                slot: arg,
+                right: Box::new(rhs),
+            }
         } else {
             self.type_tag.push(type_tag);
             self.info.last_local_slot = Some(arg);
-            self.emit_bytes(OpCode::GetLocal as u8, arg);
+            Expr::Variable { slot: arg }
         }
     }
 
-    pub fn number(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
+    pub fn number(&mut self, _scanner: &mut Scanner, _can_assign: bool) -> Expr {
         let value = &self.previous.start;
 
         if value.contains(".") {
             let float_value: f64 = value.parse::<f64>().unwrap_or_default();
-            self.emit_constant(Value::Float(float_value));
             self.type_tag.push(TypeTag::Float);
+            Expr::Literal(Value::Float(float_value))
         } else if self
             .expected_type
             .clone()
             .is_some_and(|t| t == TypeTag::Unt)
         {
             let unt_value = value.parse::<u64>().unwrap_or_default();
-            self.emit_constant(Value::Unt(unt_value));
             self.type_tag.push(TypeTag::Unt);
+            Expr::Literal(Value::Unt(unt_value))
         } else {
             let int_value = value.parse::<i64>();
 
             if let Ok(int) = int_value {
-                self.emit_constant(Value::Int(int));
                 self.type_tag.push(TypeTag::Int);
+                Expr::Literal(Value::Int(int))
             } else {
                 let unt_value = value.parse::<u64>().unwrap_or_default();
-                self.emit_constant(Value::Unt(unt_value));
                 self.type_tag.push(TypeTag::Unt);
+                Expr::Literal(Value::Unt(unt_value))
             }
         }
     }
 
-    pub fn literal(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
+    pub fn literal(&mut self, _scanner: &mut Scanner, _can_assign: bool) -> Expr {
         match self.previous.token_type {
             TokenType::True => {
-                self.emit_byte(OpCode::True as u8);
                 self.type_tag.push(TypeTag::Bool);
+                Expr::Literal(Value::Bool(true))
             }
             TokenType::False => {
-                self.emit_byte(OpCode::False as u8);
                 self.type_tag.push(TypeTag::Bool);
+                Expr::Literal(Value::Bool(false))
             }
             TokenType::Void => {
-                self.emit_byte(OpCode::Void as u8);
                 self.type_tag.push(TypeTag::Void);
+                Expr::Literal(Value::Void)
             }
             TokenType::None => {
-                self.emit_byte(OpCode::None as u8);
                 self.type_tag.push(TypeTag::Opt(Arc::new(TypeTag::None)));
+                Expr::Literal(Value::Void)
             }
-            _ => return,
+            _ => {
+                return {
+                    self.error(&format!(
+                        "Unexpected token '{:?}' ",
+                        &self.previous.token_type
+                    ));
+                    NoneExpr
+                };
+            }
         }
     }
 
-    pub fn strings(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
+    pub fn strings(&mut self, _scanner: &mut Scanner, _can_assign: bool) -> Expr {
         let raw = &self.previous.start;
         let trimmed = &raw[1..raw.len() - 1];
-        self.emit_constant(Value::Str(Arc::from(trimmed)));
         self.type_tag.push(TypeTag::Str);
+        Expr::Literal(Value::Str(Arc::from(trimmed)))
     }
 
-    pub fn char(&mut self, _scanner: &mut Scanner, _can_assign: bool) {
+    pub fn char(&mut self, _scanner: &mut Scanner, _can_assign: bool) -> Expr {
         let raw = &self.previous.start;
         let trimmed = &raw[1..raw.len() - 1];
         let into_chars: Vec<char> = trimmed.chars().collect();
 
         if into_chars.len() != 1 {
             self.error("Char type cannot contain more than one char.");
-            return;
+            return NoneExpr;
         }
 
-        self.emit_constant(Value::Char(into_chars[0]));
         self.type_tag.push(TypeTag::Char);
+        Expr::Literal(Value::Char(into_chars[0]))
     }
 
-    pub fn range(&mut self, scanner: &mut Scanner) {
+    pub fn range(&mut self, lhs: &Expr, scanner: &mut Scanner) -> Expr {
         let lhs_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
 
-        self.expression(scanner);
+        let rhs = self.parse_precedence(Precedence::Term, scanner);
 
         let rhs_typetag = self.type_tag.pop().expect(TYPETAG_ERR);
 
@@ -140,13 +159,21 @@ impl Parser {
             (TypeTag::Int, TypeTag::Int) => TypeTag::Range(Arc::new(TypeTag::Int)),
             (TypeTag::Unt, TypeTag::Unt) => TypeTag::Range(Arc::new(TypeTag::Unt)),
             (TypeTag::Float, TypeTag::Float) => TypeTag::Range(Arc::new(TypeTag::Float)),
-            _ => return self.error("Unexpected range type!"),
+            _ => {
+                return {
+                    self.error("Unexpected range type!");
+                    NoneExpr
+                };
+            }
         };
-
-        self.emit_byte(OpCode::Range as u8);
 
         self.type_tag.push(range_type.clone());
         let idx = self.add_type_tag_to_chunk(range_type);
-        self.emit_byte(idx);
+
+        Expr::Range {
+            left: Box::new(lhs.to_owned()),
+            right: Box::new(rhs),
+            type_idx: idx,
+        }
     }
 }

@@ -11,6 +11,7 @@ mod primary;
 
 impl Parser {
     pub fn expression(&mut self, scanner: &mut Scanner) {
-        self.parse_precedence(Precedence::Assignment, scanner);
+        let tree = self.parse_precedence(Precedence::Assignment, scanner);
+        self.codegen(&tree);
     }
 }

@@ -1,3 +1,4 @@
+pub mod ast;
 pub mod core;
 pub mod emit;
 pub mod expr;
@@ -6,7 +7,7 @@ pub mod methode;
 pub mod prepass;
 pub mod rules;
 pub mod stmt;
-mod type_safety;
+pub mod type_safety;
 
 use crate::{
     chunk::{Chunk, OpCode},
@@ -17,6 +18,7 @@ use crate::{
 
 pub const TYPETAG_ERR: &str = "TypeTag stack underflow — compiler emitted unbalanced typetags";
 
+pub use crate::compiler::ast::Expr::{self};
 pub use TypeTag::Void;
 use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc, sync::Arc};
 

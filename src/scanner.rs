@@ -10,7 +10,7 @@ pub struct Scanner<'s> {
     line: usize,
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub start: String,
