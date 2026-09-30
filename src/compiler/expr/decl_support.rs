@@ -1,5 +1,3 @@
-use crate::compiler::Expr::NoneExpr;
-
 use super::*;
 
 impl Parser {
@@ -31,7 +29,7 @@ impl Parser {
         self.const_table.insert(name, (value, type_tag.clone()));
     }
 
-    pub fn casting(&mut self, _lhs: &Expr, scanner: &mut Scanner) -> Expr {
+    pub fn casting(&mut self, lhs: &Expr, scanner: &mut Scanner) -> Expr {
         let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 
         self.advance(scanner);
@@ -60,13 +58,13 @@ impl Parser {
             _ => {}
         }
 
-        self.emit_byte(OpCode::Cast as u8);
-
         let idx = self.add_type_tag_to_chunk(target.clone());
-        self.emit_byte(idx);
 
         self.type_tag.push(target);
 
-        NoneExpr
+        Expr::Cast {
+            left: Box::new(lhs.to_owned()),
+            right: idx,
+        }
     }
 }

@@ -3,17 +3,17 @@ fn main() {
     println(" --basic binary calculater made in Axr-- ");
 
     loop {
-        let n1 : int = input(">1>-enter an num: ")::[int];
-        let n2 : int = input(">2>-enter an num: ")::[int];
-        let op : str = input(">> enter a op you want to make (+ , - , / , *): ")::[str];
+        let n1 : int = input::[int](">1>-enter an num: ");
+        let n2 : int = input::[int](">2>-enter an num: ");
+        let op : str = input::[str](">> enter a op you want to make (+ , - , / , *): ");
 
 
-        if n1 == 0 or n2 == 0 or is_empty(op) {
+        if is_empty(op) {
             println(">>you have not entered a op kind please try again!");
             skip;
         }
 
-        match trim(op) {
+        match op {
             "+" => {
                 println(n1 + n2);
             },

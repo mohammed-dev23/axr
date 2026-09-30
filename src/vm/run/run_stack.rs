@@ -7,16 +7,19 @@ impl Vm {
         match instructions {
             x if x == OpCode::Return as u8 => {
                 let result = self.stack.pop().expect(ERR_POP_MES);
-                self.frames.frame_count -= 1;
+                let slot = self.frames.frames[self.frames.frame_count - 1].slots;
                 self.frames.frames.pop();
+                self.frames.frame_count -= 1;
 
                 if self.frames.frame_count == 0 {
                     self.stack.pop();
                     return InterpretResult::Done;
                 }
 
-                self.stack.pop();
+                self.stack.truncate(slot);
+
                 self.stack.push(result);
+
                 InterpretResult::Ok
             }
             x if x == OpCode::Constant as u8 => {

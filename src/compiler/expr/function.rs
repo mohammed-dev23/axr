@@ -138,28 +138,23 @@ impl Parser {
         self.emit_bytes(OpCode::Constant as u8, function_value);
     }
 
-    pub fn call(&mut self, _lhs: &Expr, scanner: &mut Scanner) -> Expr {
-        let (arg_count, turbofish, generic) = self.argument_list(scanner);
-        self.emit_bytes(OpCode::Call as u8, arg_count as u8);
+    pub fn call(&mut self, lhs: &Expr, scanner: &mut Scanner) -> Expr {
+        let (arg_count, args) = self.argument_list(scanner);
 
-        if turbofish {
-            let idx = self.add_type_tag_to_chunk(generic);
-            self.emit_byte(idx);
-        } else {
-            let idx = self.add_type_tag_to_chunk(TypeTag::Nai);
-            self.emit_byte(idx);
+        Expr::FunctionCall {
+            caller: Box::new(lhs.to_owned()),
+            argument_count: arg_count,
+            arguments: args,
         }
-
-        Expr::NoneExpr
     }
 
-    pub fn argument_list(&mut self, scanner: &mut Scanner) -> (usize, bool, TypeTag) {
+    pub fn argument_list(&mut self, scanner: &mut Scanner) -> (usize, Vec<Expr>) {
         let mut arg_count = 0;
-        let mut turbofish = false;
-        let mut type_tag = TypeTag::Void;
-        let functions_name = &self.prevprev.start.clone();
+        let functions_name = &self.info.names.pop().expect("Expected a function's name");
         let table = self.function_info.parameters_type_tag_table.clone();
         let mut generic_param = TypeTag::Void;
+
+        let mut args: Vec<Expr> = Vec::new();
 
         let stack = table
             .get(functions_name)
@@ -168,7 +163,7 @@ impl Parser {
 
         loop {
             if !self.check(&RigtParen) {
-                self.expression(scanner);
+                let value = self.parse_precedence(Precedence::Assignment, scanner);
 
                 let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
@@ -200,6 +195,8 @@ impl Parser {
                 }
 
                 arg_count += 1;
+                args.push(value);
+
                 if !self.match_consume(&TokenType::Comma, scanner) {
                     break;
                 }
@@ -221,45 +218,46 @@ impl Parser {
 
         self.consume(RigtParen, "Expect ')' after arguments", scanner);
 
-        if self.match_consume(&TokenType::DoubleColon, scanner) {
-            self.consume(
-                TokenType::LeftBracket,
-                "Expect '[' after :: for turbofish",
-                scanner,
-            );
+        (arg_count, args)
+    }
 
-            self.advance(scanner);
-            let generic = self.previous.token_type.as_typetag().unwrap();
+    pub fn turbofish(&mut self, lhs: &Expr, scanner: &mut Scanner) -> Expr {
+        let caller = self.info.names.pop().expect("Expected a function's name");
 
-            self.consume(TokenType::RightBracket, "Expect ']' after generic", scanner);
+        self.consume(
+            TokenType::LeftBracket,
+            "Expect '[' at the start of a turbofish body",
+            scanner,
+        );
 
-            self.function_info
-                .return_type_tag_table
-                .insert(functions_name.clone(), generic.clone());
+        self.advance(scanner);
+        let generic = self.previous.token_type.as_typetag().unwrap();
 
-            type_tag = generic;
-            turbofish = true;
-        }
+        self.consume(
+            TokenType::RightBracket,
+            "Expect ']' at the end of a turbofish body",
+            scanner,
+        );
 
-        let expected_return_type = match self
+        if self
             .function_info
             .return_type_tag_table
-            .get(functions_name)
-            .cloned()
+            .contains_key(&caller)
         {
-            Some(x) => x,
-            None => {
-                self.error("Function must return value! , if it was a call than it need a ::[T].");
-                return (0, false, TypeTag::Void);
-            }
-        };
+            self.error(&format!("caller '{}' does not need Turbofish ::[]", caller));
+        }
 
-        self.type_tag.push(expected_return_type);
+        self.info.names.push(caller.clone());
 
-        if turbofish {
-            (arg_count, true, type_tag)
-        } else {
-            (arg_count, false, TypeTag::Void)
+        let idx = self.add_type_tag_to_chunk(generic.clone());
+
+        self.type_tag.push(generic.clone());
+
+        Expr::Turbofish {
+            left: Box::new(lhs.to_owned()),
+            caller,
+            generic,
+            idx,
         }
     }
 }

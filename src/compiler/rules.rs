@@ -127,7 +127,11 @@ static RULES: [ParseRule; 68] = [
         infix: Some(Parser::minus_minus_expr),
         precedence: Precedence::Assignment,
     }, // -=
-    NONE_RULE, // ::
+    ParseRule {
+        prefix: None,
+        infix: Some(Parser::turbofish),
+        precedence: Precedence::Call,
+    }, // ::
     ParseRule {
         prefix: None,
         infix: Some(Parser::range),

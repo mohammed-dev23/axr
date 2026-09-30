@@ -3,14 +3,10 @@ use super::super::*;
 impl Vm {
     pub fn op_call(&mut self) -> InterpretResult {
         let arg_count = self.read_byte();
+        let generic = self.read_byte();
         let function = self.peek_spec(arg_count as usize);
 
-        if function.is_fn() {
-            // ignore the extra byte emittied by turbofish
-            self.read_byte();
-        }
-
-        self.call_value(function, arg_count as usize)
+        self.call_value(function, arg_count as usize, Some(generic))
     }
 
     pub fn op_define_globals(&mut self) -> InterpretResult {

@@ -33,6 +33,9 @@ impl Parser {
 
         let Some((arg, is_mut, type_tag)) = self.resolve_local(name) else {
             let slot = self.identifier_constant(name);
+
+            self.info.names.push(name.start.clone());
+
             return Expr::Global { slot };
         };
 

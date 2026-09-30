@@ -3,7 +3,7 @@ use super::super::*;
 impl Vm {
     pub fn op_cast(&mut self) -> InterpretResult {
         let value = self.stack.pop().expect(ERR_POP_MES);
-        let target = self.get_type();
+        let target = self.get_type(None);
 
         match target {
             TypeTag::Int => self.stack.push(Value::Int(value.cast_int().unwrap())),
@@ -19,7 +19,7 @@ impl Vm {
         let lhs_value = self.stack.pop().expect(ERR_POP_MES);
         let rhs_value = self.stack.pop().expect(ERR_POP_MES);
 
-        let lhs_type_tag = self.get_type();
+        let lhs_type_tag = self.get_type(None);
 
         match lhs_type_tag {
             TypeTag::Int => {
@@ -52,7 +52,7 @@ impl Vm {
         let lhs_value = self.stack.pop().expect(ERR_POP_MES);
         let rhs_value = self.stack.pop().expect(ERR_POP_MES);
 
-        let lhs_type_tag = self.get_type();
+        let lhs_type_tag = self.get_type(None);
 
         match lhs_type_tag {
             TypeTag::Int => {

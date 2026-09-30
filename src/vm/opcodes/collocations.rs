@@ -116,7 +116,7 @@ impl Vm {
     pub fn op_range(&mut self) -> InterpretResult {
         let rhs_value = self.stack.pop().expect(ERR_POP_MES);
         let lhs_value = self.stack.pop().expect(ERR_POP_MES);
-        let type_tag = self.get_type();
+        let type_tag = self.get_type(None);
 
         match type_tag {
             t if t == &TypeTag::Range(Arc::new(TypeTag::Int)) => {

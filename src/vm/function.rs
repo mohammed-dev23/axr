@@ -3,7 +3,12 @@ use crate::value::Native;
 use super::*;
 
 impl Vm {
-    pub fn call_value(&mut self, value: Value, arg_count: usize) -> InterpretResult {
+    pub fn call_value(
+        &mut self,
+        value: Value,
+        arg_count: usize,
+        pass: Option<u8>,
+    ) -> InterpretResult {
         match value {
             Value::Function(function) => self.call(function, arg_count),
             Value::NativeFunction(native) => {
@@ -12,7 +17,7 @@ impl Vm {
                 let value = native(
                     arg_count,
                     &self.stack.clone()[self.stack.len() - arg_count..],
-                    self.generic(),
+                    self.generic(pass),
                 );
 
                 self.stack.truncate(self.stack.len() - (arg_count + 1));
@@ -56,8 +61,8 @@ impl Vm {
         );
     }
 
-    fn generic(&mut self) -> Option<&TypeTag> {
-        let generic = self.get_type();
+    fn generic(&mut self, pass: Option<u8>) -> Option<&TypeTag> {
+        let generic = self.get_type(pass);
 
         if generic == &TypeTag::Nai {
             return None;

@@ -23,7 +23,6 @@ pub enum Value {
     Function(Arc<Function>),
     NativeFunction(Arc<Native>),
     Range(RangeType),
-
     Void,
 }
 

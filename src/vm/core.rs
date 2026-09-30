@@ -43,7 +43,7 @@ impl Vm {
         match self.global_table.get(&Arc::from("main")) {
             Some(x) => {
                 self.stack.push(x.clone());
-                self.call_value(x.clone(), 0);
+                self.call_value(x.clone(), 0, None);
 
                 let res = self.run();
 
@@ -194,9 +194,14 @@ impl Vm {
         InterpretResult::RuntimeError
     }
 
-    pub fn get_type(&mut self) -> &TypeTag {
+    pub fn get_type(&mut self, pass: Option<u8>) -> &TypeTag {
         // we read the index that has been emited by the compiler
-        let idx = self.read_byte();
+
+        let idx = if let Some(x) = pass {
+            x
+        } else {
+            self.read_byte()
+        };
 
         // we index in the type tag stack and return the value
         &self.frames.frames[self.frames.frame_count - 1]

@@ -79,6 +79,7 @@ pub enum TokenType {
     Match,
     For,
     In,
+    Enum,
 
     //Values of the boolean type
     True,
@@ -383,6 +384,7 @@ impl<'s> Scanner<'s> {
             "None" => TokenType::None,
             "return" => TokenType::Return,
             "Range" => TokenType::Range,
+            "enum" => TokenType::Enum,
             _ => TokenType::Identifier,
         }
     }

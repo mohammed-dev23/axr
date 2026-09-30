@@ -40,6 +40,21 @@ pub enum Expr {
     Array {
         len: u8,
     },
+    FunctionCall {
+        caller: Box<Expr>,
+        argument_count: usize,
+        arguments: Vec<Expr>,
+    },
+    Turbofish {
+        left: Box<Expr>,
+        caller: String,
+        generic: TypeTag,
+        idx: u8,
+    },
+    Cast {
+        left: Box<Expr>,
+        right: u8,
+    },
     NoneExpr,
 }
 
@@ -134,6 +149,51 @@ impl Parser {
                     self.emit_byte(OpCode::Array as u8);
                     self.emit_byte(*len);
                 }
+            }
+            Expr::FunctionCall {
+                caller,
+                argument_count,
+                arguments,
+            } => {
+                let (caller, idx) = match &**caller {
+                    Expr::Turbofish {
+                        left,
+                        caller: _,
+                        generic: _,
+                        idx,
+                    } => (left, idx),
+                    other => (
+                        &Box::from(other.to_owned()),
+                        &self.add_type_tag_to_chunk(TypeTag::Nai),
+                    ),
+                };
+
+                self.codegen(caller);
+
+                for i in arguments {
+                    self.codegen(i);
+                }
+
+                self.emit_bytes(OpCode::Call as u8, *argument_count as u8);
+
+                self.emit_byte(*idx);
+            }
+            Expr::Turbofish {
+                left: _,
+                caller,
+                generic,
+                idx: _,
+            } => {
+                self.function_info
+                    .return_type_tag_table
+                    .insert(caller.to_owned(), generic.to_owned());
+            }
+            Expr::Cast { left, right } => {
+                self.codegen(left);
+
+                self.emit_byte(OpCode::Cast as u8);
+
+                self.emit_byte(*right);
             }
             Expr::NoneExpr => {}
         }

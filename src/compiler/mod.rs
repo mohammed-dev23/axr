@@ -72,6 +72,7 @@ pub struct ControlFlow {
 pub struct Info {
     pub is_mut: Vec<bool>,
     pub last_local_slot: Option<u8>,
+    pub names: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
@@ -140,6 +141,7 @@ impl Parser {
             info: Info {
                 is_mut: Vec::new(),
                 last_local_slot: Some(0),
+                names: Vec::new(),
             },
             function_info: FunctionInfo {
                 parameters_type_tag_table: HashMap::new(),

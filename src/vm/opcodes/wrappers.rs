@@ -8,7 +8,7 @@ use super::super::*;
 impl Vm {
     pub fn op_opt_some(&mut self) -> InterpretResult {
         let value = self.stack.pop().expect(ERR_POP_MES);
-        let type_tag = self.get_type();
+        let type_tag = self.get_type(None);
 
         if value.is_array() {
             let array_value = value.clone();
