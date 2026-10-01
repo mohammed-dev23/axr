@@ -1,13 +1,16 @@
+use crate::compiler::rules::Precedence::Assignment;
+
 use super::*;
 
 impl Parser {
-    pub fn println_statement(&mut self, scanner: &mut Scanner) {
+    pub fn println_statement(&mut self, scanner: &mut Scanner) -> Stmt {
         if self.compiler.scope_depth == 0 {
             self.error("Statement must be insaid a fn body");
-            return;
+            return Stmt::NoneStmt;
         }
+
         self.consume(TokenType::LeftParen, "Expect '(' before value.", scanner);
-        self.expression(scanner);
+        let value = self.parse_precedence(Assignment, scanner);
         let typetag = self.type_tag.pop().expect(TYPETAG_ERR);
 
         if typetag.is_opt() {
@@ -20,6 +23,7 @@ impl Parser {
             "Expect ';' at the end of the statement.",
             scanner,
         );
-        self.emit_byte(OpCode::Println as u8);
-    }
+
+        Stmt::Println(Box::new(value))
+    } // done
 }

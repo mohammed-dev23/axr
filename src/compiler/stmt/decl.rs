@@ -1,38 +1,34 @@
+use crate::compiler::{ast::Stmt::NoneStmt, rules::Precedence::Assignment};
+
 use super::*;
 
 impl Parser {
-    pub fn declaration(&mut self, scanner: &mut Scanner) {
-        self.statement(scanner);
+    pub fn declaration(&mut self, scanner: &mut Scanner) -> Stmt {
+        let stmt = self.statement(scanner);
 
         if self.painc_mode {
             self.synchronize(scanner);
         }
-    }
 
-    pub fn fn_declaration(&mut self, scanner: &mut Scanner) {
+        stmt
+    } // done
+
+    pub fn fn_declaration(&mut self, scanner: &mut Scanner) -> Stmt {
         self.consume(TokenType::Identifier, "Expect a functions name", scanner);
-        let function_name = self.previous.start.clone();
+        let function_name = self.previous.clone();
 
-        let global_slot = if self.compiler.scope_depth == 0 {
-            self.declare_variable();
-            Some(self.identifier_constant(&self.previous.clone()))
-        } else {
-            self.declare_variable();
-            self.mark_initialized();
-            None
-        };
+        let expr = self.function(FunctionType::Function, scanner, &function_name.start);
 
-        self.function(FunctionType::Function, scanner, &function_name);
-
-        if let Some(x) = global_slot {
-            self.emit_bytes(OpCode::DefineGlobal as u8, x);
+        Stmt::Fn {
+            value: Box::new(expr),
+            name: function_name,
         }
-    }
+    } // done
 
-    pub fn variable_declaration(&mut self, scanner: &mut Scanner) {
+    pub fn variable_declaration(&mut self, scanner: &mut Scanner) -> Stmt {
         if self.compiler.scope_depth == 0 {
             self.error("Statements must be insaid a fn body");
-            return;
+            return NoneStmt;
         }
 
         self.parse_variable("Expect variable name.", scanner);
@@ -91,7 +87,12 @@ impl Parser {
                 TokenType::Int => TypeTag::Range(Arc::new(TypeTag::Int)),
                 TokenType::Unt => TypeTag::Range(Arc::new(TypeTag::Unt)),
                 TokenType::Float => TypeTag::Range(Arc::new(TypeTag::Float)),
-                _ => return self.error(&format!("Unexpected Range type '{:?}' ", &type_tag)),
+                _ => {
+                    return {
+                        self.error(&format!("Unexpected Range type '{:?}' ", &type_tag));
+                        Stmt::NoneStmt
+                    };
+                }
             };
 
             range
@@ -112,10 +113,14 @@ impl Parser {
             _ => TypeTag::Void,
         });
 
+        let value: Expr;
+
         if self.match_consume(&TokenType::Equal, scanner) {
-            self.expression(scanner);
+            value = self.parse_precedence(Assignment, scanner);
         } else {
-            self.emit_byte(OpCode::Void as u8);
+            value = Expr::Variable {
+                slot: OpCode::Void as u8,
+            };
             self.type_tag.push(TypeTag::Void);
         }
 
@@ -171,14 +176,18 @@ impl Parser {
         );
 
         self.define_variable();
-    }
 
-    pub fn const_declaration(&mut self, scanner: &mut Scanner) {
+        Stmt::Let {
+            value: Box::new(value),
+        }
+    } // done
+
+    pub fn const_declaration(&mut self, scanner: &mut Scanner) -> Stmt {
         let const_name = self.parse_const("Expect const name.", scanner);
 
         if !const_name.chars().all(|c| c.is_uppercase()) {
             self.error("Const name must be all in uppercase");
-            return;
+            return NoneStmt;
         }
 
         self.consume(
@@ -265,8 +274,12 @@ impl Parser {
             scanner,
         );
 
-        self.define_const(const_name, const_value, &type_tag);
-    }
+        Stmt::Const {
+            name: const_name,
+            value: const_value,
+            type_tag,
+        }
+    } // done
 
     pub fn declare_variable(&mut self) {
         if self.compiler.scope_depth == 0 {
@@ -275,5 +288,5 @@ impl Parser {
 
         let name = self.previous.clone();
         self.add_local(name);
-    }
+    } // nothing to do
 }

@@ -25,10 +25,6 @@ impl Parser {
         self.mark_initialized();
     }
 
-    pub fn define_const(&mut self, name: String, value: Value, type_tag: &TypeTag) {
-        self.const_table.insert(name, (value, type_tag.clone()));
-    }
-
     pub fn casting(&mut self, lhs: &Expr, scanner: &mut Scanner) -> Expr {
         let type_tag = self.type_tag.pop().unwrap_or(TypeTag::Void);
 

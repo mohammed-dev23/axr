@@ -14,7 +14,12 @@ impl Parser {
         self.advance(&mut scanner);
 
         while !self.match_consume(&TokenType::Eof, &mut scanner) {
-            self.declaration(&mut scanner);
+            let stmt = self.declaration(&mut scanner);
+            self.ast.push(stmt);
+        }
+
+        for i in self.ast.clone() {
+            self.stmt_gen(&i);
         }
 
         let function = self.end_compiler();

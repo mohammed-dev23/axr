@@ -1,19 +1,12 @@
-const TEST : str = "just a test";
-
-// enum Test {
-//     T,
-//     E,
-//     S,
-//     T
-// }
-
 fn main() {
-    let testy = test("test");
-    println(testy);
+    let x = 1;
+    let testu : str = test("some");
 
+    println(x);
     return;
 }
 
 fn test(test : str) -> str {
+    println(test);
     return test;
 }

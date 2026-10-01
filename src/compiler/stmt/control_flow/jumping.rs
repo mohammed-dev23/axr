@@ -1,3 +1,5 @@
+use crate::compiler::{ast::Stmt::NoneStmt, rules::Precedence::Assignment};
+
 use super::super::*;
 
 impl Parser {
@@ -45,8 +47,9 @@ impl Parser {
         self.emit_loop(loop_start);
     }
 
-    pub fn return_stmt(&mut self, scanner: &mut Scanner) {
+    pub fn return_stmt(&mut self, scanner: &mut Scanner) -> Stmt {
         let function_name = &self.compiler.function.function.name;
+        let stmt: Stmt;
 
         let expected_return_type = match self
             .function_info
@@ -55,7 +58,12 @@ impl Parser {
             .cloned()
         {
             Some(x) => x,
-            None => return self.error("Function name was not found in the table!."),
+            None => {
+                return {
+                    self.error("Function name was not found in the table!.");
+                    NoneStmt
+                };
+            }
         };
 
         if self.match_consume(&TokenType::Semicolon, scanner) {
@@ -67,10 +75,9 @@ impl Parser {
                 ));
             }
 
-            self.emit_byte(OpCode::Void as u8);
-            self.emit_byte(OpCode::Return as u8);
+            stmt = Stmt::Return(None);
         } else {
-            self.expression(scanner);
+            let value = self.parse_precedence(Assignment, scanner);
 
             let type_tag = self.type_tag.pop().expect(TYPETAG_ERR);
 
@@ -81,15 +88,16 @@ impl Parser {
                 ));
             }
 
-            self.emit_byte(OpCode::Return as u8);
-
             self.consume(
                 TokenType::Semicolon,
                 "Expect ';' at the end of the return statement",
                 scanner,
             );
+
+            stmt = Stmt::Return(Some(Box::new(value)))
         }
 
         self.compiler.has_returned = true;
-    }
+        stmt
+    } // done
 }

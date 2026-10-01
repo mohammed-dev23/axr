@@ -1,4 +1,4 @@
-use crate::chunk::OpCode::GetLocal;
+use crate::{chunk::OpCode::GetLocal, compiler::ast::Stmt::NoneStmt};
 
 use super::*;
 
@@ -20,7 +20,7 @@ pub enum Expr {
         right: Box<Expr>,
     },
     Global {
-        slot: u8,
+        name: Token,
     },
     Range {
         left: Box<Expr>,
@@ -55,7 +55,34 @@ pub enum Expr {
         left: Box<Expr>,
         right: u8,
     },
+    Function {
+        name: String,
+        arity: usize,
+        block: Box<Vec<Stmt>>,
+        ftype: FunctionType,
+    },
     NoneExpr,
+}
+
+#[derive(Debug, Clone)]
+pub enum Stmt {
+    Let {
+        value: Box<Expr>,
+    },
+    Fn {
+        value: Box<Expr>,
+        name: Token,
+    },
+    Const {
+        name: String,
+        value: Value,
+        type_tag: TypeTag,
+    },
+    Block(Vec<Stmt>),
+    Expression(Box<Expr>),
+    Println(Box<Expr>),
+    Return(Option<Box<Expr>>),
+    NoneStmt,
 }
 
 impl Parser {
@@ -93,7 +120,10 @@ impl Parser {
                 self.emit_bytes(OpCode::SetLocal as u8, *slot)
             }
             Expr::Variable { slot } => self.emit_bytes(OpCode::GetLocal as u8, *slot),
-            Expr::Global { slot } => self.emit_bytes(OpCode::GetGlobal as u8, *slot),
+            Expr::Global { name } => {
+                let slot = self.identifier_constant(name);
+                self.emit_bytes(OpCode::GetGlobal as u8, slot);
+            }
             Expr::Range {
                 left,
                 right,
@@ -195,7 +225,89 @@ impl Parser {
 
                 self.emit_byte(*right);
             }
+            Expr::Function {
+                name,
+                arity,
+                block,
+                ftype,
+            } => {
+                let enclosing = std::mem::replace(&mut self.compiler, Compiler::new(*ftype));
+
+                self.compiler_stack.push(enclosing);
+
+                for i in block.as_ref() {
+                    self.stmt_gen(i);
+                }
+
+                let function = Function {
+                    name: name.to_string(),
+                    arity: *arity,
+                    chunk: self.compiler.function.function.chunk.clone(),
+                };
+
+                self.compiler = self.compiler_stack.pop().expect("compiler stack underflow");
+
+                let function = self.make_constant(Value::Function(Arc::new(function)));
+                self.emit_bytes(OpCode::Constant as u8, function);
+            }
             Expr::NoneExpr => {}
+        }
+    }
+
+    pub fn stmt_gen(&mut self, stmt: &Stmt) {
+        match stmt {
+            Stmt::Let { value } => {
+                self.codegen(&value);
+            }
+            Stmt::Fn { value, name } => {
+                self.codegen(value);
+
+                let global_slot = if self.compiler.scope_depth == 0 {
+                    self.declare_variable();
+                    Some(self.identifier_constant(&name))
+                } else {
+                    self.declare_variable();
+                    self.mark_initialized();
+                    None
+                };
+
+                if let Some(x) = global_slot {
+                    self.emit_bytes(OpCode::DefineGlobal as u8, x);
+                }
+            }
+            Stmt::Block(x) => {
+                for i in x {
+                    self.stmt_gen(i);
+                }
+            }
+            Stmt::Expression(x) => {
+                self.codegen(x);
+
+                self.emit_byte(OpCode::Pop as u8);
+            }
+            Stmt::Const {
+                name,
+                value,
+                type_tag,
+            } => {
+                self.const_table
+                    .insert(name.to_owned(), (value.to_owned(), type_tag.to_owned()));
+            }
+            Stmt::Println(x) => {
+                self.codegen(x);
+
+                self.emit_byte(OpCode::Println as u8);
+            }
+            Stmt::Return(x) => {
+                if let Some(y) = x {
+                    self.codegen(y);
+                } else {
+                    self.emit_byte(OpCode::Void as u8);
+                }
+
+                self.emit_byte(OpCode::Return as u8);
+            }
+            NoneStmt => {}
         }
     }
 }

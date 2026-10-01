@@ -11,7 +11,7 @@ pub mod type_safety;
 
 use crate::{
     chunk::{Chunk, OpCode},
-    compiler::{locals::Local, rules::Precedence},
+    compiler::{ast::Stmt, locals::Local, rules::Precedence},
     scanner::{Scanner, Token, TokenType},
     value::{Function, Value},
 };
@@ -36,8 +36,10 @@ pub struct Parser {
     pub(in crate::compiler) control_flow: ControlFlow,
     pub(in crate::compiler) function_info: FunctionInfo,
     pub(in crate::compiler) info: Info,
+    pub(in crate::compiler) ast: Vec<Stmt>,
 }
 
+#[derive(Debug, Clone)]
 pub struct Compiler {
     pub(in crate::compiler) locals: Vec<Local>,
     pub(in crate::compiler) local_count: i32,
@@ -46,6 +48,7 @@ pub struct Compiler {
     pub(in crate::compiler) has_returned: bool,
 }
 
+#[derive(Debug, Clone)]
 pub struct Functions {
     function: Function,
     #[allow(warnings)]
@@ -57,7 +60,7 @@ pub struct FunctionInfo {
     return_type_tag_table: HashMap<String, TypeTag>,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FunctionType {
     Function,
     Script,
@@ -147,6 +150,7 @@ impl Parser {
                 parameters_type_tag_table: HashMap::new(),
                 return_type_tag_table: HashMap::new(),
             },
+            ast: Vec::new(),
         }
     }
 }

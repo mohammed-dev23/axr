@@ -7,14 +7,13 @@ impl Parser {
         function_type: FunctionType,
         scanner: &mut Scanner,
         function_name: &str,
-    ) {
+    ) -> Expr {
         // here we swap the main stream compiler with the compiler of this function so
         // it could compiler the fn as normal.
         let enclosing = std::mem::replace(&mut self.compiler, Compiler::new(function_type));
         // the old compiler the swaped one we push to the stack of compilers so we dont lose
         // track for it
         self.compiler_stack.push(enclosing);
-
         //we hand the function's name to it as a value, or like metadata so another
         // things could inspict that name and make changes to the function
         self.compiler.function.function.name = function_name.to_string();
@@ -125,17 +124,25 @@ impl Parser {
             "Expect '{' before function body.",
             scanner,
         );
-        self.block(scanner);
+
+        let stmts = self.block(scanner);
+
+        let arity = self.compiler.function.function.arity;
 
         // we get the funtion with all it's compieled stuff from end compiler and we save it
-        let function = Arc::new(self.end_compiler());
+        // let function = Arc::new(self.end_compiler());
         // we swap back the last working function
         self.compiler = self.compiler_stack.pop().expect("compiler stack underflow");
 
         // since functions are fisrt class values we emit them just as if they where normal values
         // like 'Str' or 'Int' etc
-        let function_value = self.make_constant(Value::Function(function));
-        self.emit_bytes(OpCode::Constant as u8, function_value);
+
+        Expr::Function {
+            name: function_name.to_string(),
+            arity,
+            block: Box::new(stmts),
+            ftype: function_type,
+        }
     }
 
     pub fn call(&mut self, lhs: &Expr, scanner: &mut Scanner) -> Expr {
@@ -217,6 +224,14 @@ impl Parser {
         }
 
         self.consume(RigtParen, "Expect ')' after arguments", scanner);
+
+        let return_type = self
+            .function_info
+            .return_type_tag_table
+            .get(functions_name)
+            .expect("a function must return a value!");
+
+        self.type_tag.push(return_type.clone());
 
         (arg_count, args)
     }

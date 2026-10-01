@@ -1,5 +1,6 @@
 use super::*;
 
+#[derive(Debug, Clone)]
 pub struct Local {
     pub(in crate::compiler) name: Token,
     pub(in crate::compiler) depth: i32,
